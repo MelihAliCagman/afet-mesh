@@ -1,0 +1,3 @@
+# Python bağımlılıkları (adımlar ilerledikçe eklenecek)
+matplotlib
+pytest

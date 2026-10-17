@@ -1,0 +1,37 @@
+# --- Yerel çalışma dosyaları (repoya girmez) ---
+
+docs/adimlar/
+
+# --- Python ---
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+*.egg-info/
+
+# --- STM32CubeIDE / derleme çıktıları ---
+Debug/
+Release/
+*.o
+*.elf
+*.bin
+*.hex
+*.map
+*.su
+*.d
+.metadata/
+.settings/
+*.launch
+
+# --- Veritabanı ve loglar ---
+*.db
+*.sqlite
+*.log
+
+# --- Editör / işletim sistemi ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
