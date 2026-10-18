@@ -16,7 +16,7 @@ Baz istasyonu ve elektrik altyapısı çöktüğünde; STM32 saha/röle düğüm
 
 | Faz | İçerik | Durum |
 |---|---|---|
-| 0 | Python simülasyonu (adım 00-10) | **devam ediyor** (adım 01 tamam) |
+| 0 | Python simülasyonu (adım 00-10) | **devam ediyor** (adım 02 tamam) |
 | 1 | Raspberry Pi gateway, sahte radyo (adım 11-16) | bekliyor |
 | 2 | STM32 protokol çekirdeği, UART sahte radyo (adım 17-24) | bekliyor |
 | 3 | Gerçek LoRa (adım 25-28) | bekliyor (modül siparişi gerekli) |
@@ -39,7 +39,21 @@ Baz istasyonu ve elektrik altyapısı çöktüğünde; STM32 saha/röle düğüm
 
 Bilinen sınır: model şimdilik yalnızca mesafeye bağlı olduğu için bağlantılar simetriktir. Gerçek ortamdaki asimetri ve gölgeleme ileriki adımlarda eklenecek. Yol kaybı üssü (3,5) bir varsayımdır; gerçek LoRa ölçümüyle (adım 26) kalibre edilecek.
 
-**Sıradaki:** Adım 02, olay tabanlı simülasyon motoru ve LoRa airtime hesabı.
+**Adım 02: Olay motoru, LoRa airtime ve duty cycle** (`sim/engine.py`, `sim/lora.py`). Simülasyon zamanı olay kuyruğuyla yönetilir (saat olaydan olaya atlar). Bir LoRa paketinin havada kalma süresi resmi formülle hesaplanır; düğümün %1 duty cycle sınırı kayan 1 saatlik pencerede takip edilir.
+
+| Test | Sonuç |
+|---|---|
+| Ters sırada eklenen olaylar | Zaman sırasıyla çalışır; aynı zamanlı olaylar ekleme sırasıyla |
+| `run(until=1.5)` | 2,0 sn'deki olay çalışmaz, kuyrukta bekler |
+| Periyodik HELLO, 2 düğüm, 30 sn | Düğüm 1: 7, düğüm 2: 6 HELLO, zamanlar beklenen gibi |
+| Airtime, SF7, 20 bayt | 43 sembol, 56,576 ms (elle hesapla uyumlu) |
+| Airtime, SF12, 20 bayt | 1,319 s (SF7'den ≈ 23 kat uzun) |
+| Yük etkisi, SF7 | 10 bayt: 41,2 ms, 20 bayt: 56,6 ms, 51 bayt: 102,7 ms (basamaklı artış) |
+| Duty cycle, SF12, 20 bayt | Saatte en fazla 27 paket (35,6 s); 28. paket reddedilir, 1 saat sonra bütçe yenilenir |
+
+Bulgu: SF12 menzili artırır ama düğüm saatte yalnızca ~27 paket gönderebilir (ortalama 132 sn'de bir). HELLO ve SOS trafiği SF'ye göre tasarlanmalı.
+
+**Sıradaki:** Adım 03, paket yapısı, HELLO ve komşu tablosu.
 
 ## Klasörler
 | Klasör | İçerik |
