@@ -11,59 +11,35 @@ Baz istasyonu ve elektrik altyapısı çöktüğünde; STM32 saha/röle düğüm
 - Raspberry Pi gateway, SQLite, yerel dashboard
 - Fırsatçı internet köprüsü (kalıcı kuyruk, çift kayıt önleme)
 
-## Durum
-Faz 0: Python simülasyonu devam ediyor. Adım listesi ve ilerleme: [docs/yol-haritasi.md](docs/yol-haritasi.md)
+## Gerçekleme planı ve durum
+Önce simülasyonda doğrulanır, sonra gerçek donanıma geçilir. Tam adım listesi: [docs/yol-haritasi.md](docs/yol-haritasi.md)
 
-| Adım | Konu | Durum |
+| Faz | İçerik | Durum |
 |---|---|---|
-| 00 | Ortam kurulumu (repo, venv, `.gitignore`) | tamam |
-| 01 | Düğümler, radyo menzili, komşuluk | tamam |
-| 02 | Olay tabanlı simülasyon motoru, LoRa airtime | sırada |
+| 0 | Python simülasyonu (adım 00-10) | **devam ediyor** (adım 01 tamam) |
+| 1 | Raspberry Pi gateway, sahte radyo (adım 11-16) | bekliyor |
+| 2 | STM32 protokol çekirdeği, UART sahte radyo (adım 17-24) | bekliyor |
+| 3 | Gerçek LoRa (adım 25-28) | bekliyor (modül siparişi gerekli) |
+| 4 | GPS, TFT, ESP8266, IMU, enerji (adım 29-35) | bekliyor |
+| 5 | Ölçüm, saha testi, rapor (adım 36-38) | bekliyor |
 
-## Simülasyon: düğümler ve radyo menzili
-`sim/mesh_sim.py` ağın temelini tanımlar.
+### Tamamlanan adımlar ve test sonuçları
 
-- **`Node`**: kimlik, 2D konum (metre) ve gateway olup olmadığını tutar.
-- **`distance(a, b)`**: iki düğüm arası Öklid mesafesi.
-- **`rssi(a, b)`**: log-mesafe yol kaybı modeliyle alıcıdaki sinyal gücü (dBm):
+**Adım 00: Ortam kurulumu.** Repo, Python sanal ortamı, `.gitignore` ve ilk commit. Python 3.13 venv'inde `matplotlib` ve `pytest` kurulumu doğrulandı.
 
-  `RSSI(d) = P_tx − PL(d0) − 10·n·log10(d / d0)`
+**Adım 01: Düğümler ve radyo menzili** (`sim/mesh_sim.py`). Düğümler 2D düzlemde konumlanır; log-mesafe yol kaybı modeliyle RSSI hesaplanır ve alıcı hassasiyet eşiğini (-123 dBm) aşan düğümler birbirinin komşusu sayılır.
 
-  | Parametre | Değer | Anlamı |
-  |---|---|---|
-  | `P_tx` | 14 dBm | 868 MHz için tipik verici gücü |
-  | `PL(d0)` | 31.2 dB | 1 m'deki serbest uzay kaybı |
-  | `n` | 3.5 | yol kaybı üssü (şehir/enkaz varsayımı, ölçümle kalibre edilecek) |
-  | hassasiyet | −123 dBm | bu değerin altındaki sinyal duyulmaz |
+| Test | Sonuç |
+|---|---|
+| 50 m'de mesafe ve RSSI | 50,0 m, -76,66 dBm (elle hesapla uyumlu) |
+| 700 m arayla 4 düğüm | Her düğüm yalnızca yanındakini duyar: zincir, gateway'e 3 hop |
+| 400 m arayla 4 düğüm | Ağ sıklaşır: düğümler 2'şer, 3'er komşu görür |
+| 1100 m arayla düğümler | Hiçbir bağlantı kurulamaz: menzil sınırı ≈ 1050 m |
+| Karışık yerleşim (3-4 arası 200 m) | Ağ üç ayrı parçaya bölünür: {1}, {2}, {3, 4} |
 
-- **`can_hear(tx, rx)`** ve **`neighbors(node, nodes)`**: RSSI hassasiyet eşiğinin üstündeyse düğümler birbirinin komşusudur. Bu komşuluk ilişkisi ağın grafını oluşturur; yönlendirme bunun üzerinde çalışacak.
+Bilinen sınır: model şimdilik yalnızca mesafeye bağlı olduğu için bağlantılar simetriktir. Gerçek ortamdaki asimetri ve gölgeleme ileriki adımlarda eklenecek. Yol kaybı üssü (3,5) bir varsayımdır; gerçek LoRa ölçümüyle (adım 26) kalibre edilecek.
 
-Bu modelde yol kaybı yalnızca mesafeye bağlıdır, bu yüzden bağlantılar simetriktir. Gerçek bağlantılardaki asimetri ve gölgeleme ileriki adımlarda eklenecek.
-
-### Örnek
-700 m arayla dizilmiş dört düğüm, her düğümün yalnızca yanındakini duyduğu bir zincir oluşturur:
-
-```python
-from sim.mesh_sim import Node, neighbors
-
-nodes = [
-    Node(1, 0.0, 0.0, is_gateway=True),
-    Node(2, 700.0, 0.0),
-    Node(3, 1400.0, 0.0),
-    Node(4, 2100.0, 0.0),
-]
-for n in nodes:
-    print(n.node_id, [m.node_id for m in neighbors(n, nodes)])
-```
-
-```
-1 [2]
-2 [1, 3]
-3 [2, 4]
-4 [3]
-```
-
-Düğüm 4'ün mesajı gateway'e 4 → 3 → 2 → 1 yoluyla, üç hopta ulaşır.
+**Sıradaki:** Adım 02, olay tabanlı simülasyon motoru ve LoRa airtime hesabı.
 
 ## Klasörler
 | Klasör | İçerik |
