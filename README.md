@@ -16,7 +16,7 @@ Baz istasyonu ve elektrik altyapısı çöktüğünde; STM32 saha/röle düğüm
 
 | Faz | İçerik | Durum |
 |---|---|---|
-| 0 | Python simülasyonu (adım 00-10) | **devam ediyor** (adım 02 tamam) |
+| 0 | Python simülasyonu (adım 00-10) | **devam ediyor** (adım 03 tamam) |
 | 1 | Raspberry Pi gateway, sahte radyo (adım 11-16) | bekliyor |
 | 2 | STM32 protokol çekirdeği, UART sahte radyo (adım 17-24) | bekliyor |
 | 3 | Gerçek LoRa (adım 25-28) | bekliyor (modül siparişi gerekli) |
@@ -53,7 +53,25 @@ Bilinen sınır: model şimdilik yalnızca mesafeye bağlı olduğu için bağla
 
 Bulgu: SF12 menzili artırır ama düğüm saatte yalnızca ~27 paket gönderebilir (ortalama 132 sn'de bir). HELLO ve SOS trafiği SF'ye göre tasarlanmalı.
 
-**Sıradaki:** Adım 03, paket yapısı, HELLO ve komşu tablosu.
+**Adım 03: Paket yapısı, HELLO ve komşu tablosu** (`sim/packet.py`, `sim/neighbor.py`, `sim/radio.py`, `sim/node.py`). Paket formatı (7 bayt başlık + yük + 4 bayt doğrulama etiketi) tanımlandı ve airtime hesabına bağlandı. Radyo ortamı, yayını menzildeki düğümlere airtime kadar sonra ve ölçülen RSSI ile ulaştırıyor. Her düğüm periyodik HELLO yayıp komşu tablosunu kendi kuruyor; sessiz kalan komşular zaman aşımıyla siliniyor.
+
+Çalıştırma (proje kökünden): `python -m sim.node`
+
+| Test | Sonuç |
+|---|---|
+| HELLO paketi, 2 bayt yük | 13 bayt, SF7'de 46,3 ms |
+| Komşu tablosu, timeout 15 sn: sessizlik 13 sn / 16 sn | 13 sn'de kalır, 16 sn'de silinir |
+| Timeout 5 sn | Sağlam komşu da yanlışlıkla silinir (yanlış alarm) |
+| Radyo: 3 düğüm (0, 700, 1400 m), düğüm 1 yayın yapar | Yalnızca 700 m'deki düğüm alır (t = 1,041216 sn, -116,8 dBm) |
+| Radyo: aynı paket SF12 | Alma zamanı 2,155072 sn (airtime 1155 ms, SF7'nin yaklaşık 28 katı) |
+| Röle yeniden yayını | Paketin kaynak alanı değişmez; üretici kendi paketini geri duyar (yankı) |
+| HELLO ile komşu keşfi, 4 düğüm, 700 m, 30 sn | `1 [2]`, `2 [1, 3]`, `3 [2, 4]`, `4 [3]`: haritasız, Adım 01'deki hesapla aynı |
+| Aynı, 400 m arayla | Ağ sıklaşır: `1 [2, 3]`, `2 [1, 3, 4]`, `3 [1, 2, 4]`, `4 [2, 3]` |
+| Aynı, yalnızca 3 sn | Keşif tamamlanmaz (ilk HELLO'lar rastgele), tablolar eksik |
+
+Bulgular: (1) 5 sn'lik HELLO periyodu SF7'de bile %1 duty cycle bütçesinin yaklaşık %82'sini tüketiyor, bu yüzden periyot SF'ye göre seçilmeli. (2) Hassasiyet eşiği şimdilik SF'den bağımsız; SF12'nin menzil kazancı henüz modelde yok.
+
+**Sıradaki:** Adım 04, distance-vector yönlendirme.
 
 ## Klasörler
 | Klasör | İçerik |

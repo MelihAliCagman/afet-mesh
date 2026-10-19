@@ -15,7 +15,7 @@ Amaç: protokolü donanımsız tasarlayıp doğrulamak, ilk grafikleri üretmek.
 | 00 | [x] Ortam kurulumu | Repo klonu, Python venv, VS Code, git kimliği, `.gitignore` kontrolü, README, ilk commit | ✅ |
 | 01 | [x] Düğümler ve radyo menzili | `Node` sınıfı, 2D yerleşim, log-mesafe kayıp modeli ile RSSI, "kim kimi duyar" komşuluk | ✅ |
 | 02 | [x] Olay tabanlı simülasyon motoru | Zaman, olay kuyruğu, LoRa airtime formülü (SF, BW, CR, payload), duty cycle sayacı | ✅ |
-| 03 | [ ] Paket yapısı, HELLO, komşu tablosu | Paket alanları, periyodik HELLO, komşu tablosu (ID, RSSI, son görülme) | ✅ |
+| 03 | [x] Paket yapısı, HELLO, komşu tablosu | Paket alanları, periyodik HELLO, komşu tablosu (ID, RSSI, son görülme) | ✅ |
 | 04 | [ ] Distance-vector yönlendirme | Gateway'e mesafe, sıra numarası, en iyi komşu seçimi, döngü önleme | ✅ |
 | 05 | [ ] Veri iletimi | DATA paketi, TTL, çift paket bastırma, hop-hop ACK, sınırlı yeniden deneme | ✅ |
 | 06 | [ ] Kanal erişimi | Çarpışma modeli, dinle-sonra-konuş, rastgele backoff | ✅ |
