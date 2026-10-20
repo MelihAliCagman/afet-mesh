@@ -27,6 +27,7 @@ def link_cost(rssi):
         return 2
     return 3
 
+
 @dataclass
 class Route:
     next_hop: int
@@ -38,6 +39,7 @@ class Route:
 class RoutingTable:
     def __init__(self):
         self.route = None
+        self.switches = 0
 
     def update(self, neighbor_id, adv_seq, adv_metric, rssi, now):
         metric = adv_metric + link_cost(rssi)
@@ -48,6 +50,8 @@ class RoutingTable:
                 return True
             return False
         if r is None or seq_newer(adv_seq, r.gw_seq) or (adv_seq == r.gw_seq and metric < r.metric):
+            if r is not None and r.next_hop != neighbor_id:
+                self.switches += 1
             self.route = Route(neighbor_id, metric, adv_seq, now)
             return True
         return False

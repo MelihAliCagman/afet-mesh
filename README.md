@@ -16,7 +16,7 @@ Baz istasyonu ve elektrik altyapısı çöktüğünde; STM32 saha/röle düğüm
 
 | Faz | İçerik | Durum |
 |---|---|---|
-| 0 | Python simülasyonu (adım 00-10) | **devam ediyor** (adım 03 tamam) |
+| 0 | Python simülasyonu (adım 00-10) | **devam ediyor** (adım 04 tamam) |
 | 1 | Raspberry Pi gateway, sahte radyo (adım 11-16) | bekliyor |
 | 2 | STM32 protokol çekirdeği, UART sahte radyo (adım 17-24) | bekliyor |
 | 3 | Gerçek LoRa (adım 25-28) | bekliyor (modül siparişi gerekli) |
@@ -71,7 +71,24 @@ Bulgu: SF12 menzili artırır ama düğüm saatte yalnızca ~27 paket gönderebi
 
 Bulgular: (1) 5 sn'lik HELLO periyodu SF7'de bile %1 duty cycle bütçesinin yaklaşık %82'sini tüketiyor, bu yüzden periyot SF'ye göre seçilmeli. (2) Hassasiyet eşiği şimdilik SF'den bağımsız; SF12'nin menzil kazancı henüz modelde yok.
 
-**Sıradaki:** Adım 04, distance-vector yönlendirme.
+**Adım 04: Distance-vector yönlendirme** (`sim/routing.py`, `sim/node.py`). Gateway, HELLO paketlerinde kendi sıra numarasını ve maliyetini (0) ilan eder. Diğer düğümler duydukları ilanlara kendi bağlantı maliyetlerini ekleyip gateway'e giden en iyi komşuyu seçer ve kendi maliyetlerini ilan eder; bilgi her HELLO periyodunda bir hop ilerler. Bağlantı maliyeti RSSI'ya göre 1-3 arasındadır (zayıf bağlantı pahalı). Daha yeni sıra numaralı bilgi eskiye üstündür, eski numaralı bilgi kabul edilmez (döngü ve bayat yol önlemi); sıra numarası 65535'ten sonra 0'a döner.
+
+Çalıştırma (proje kökünden): `python -m sim.node` (deneyler), `python -m sim.routing` (karar kuralları)
+
+| Test | Sonuç |
+|---|---|
+| HELLO yükü (sıra numarası 2 bayt + maliyet 1 bayt) | Kodla-çöz gidiş-dönüş doğru; HELLO 14 bayt, SF7'de 46,3 ms (yük ek airtime getirmedi) |
+| Sıra numarası taşması | 0, 65535'ten yeni sayılır (dairesel karşılaştırma) |
+| Karar kuralları | Daha yeni numara kazanır; aynı numarada daha ucuz yol kazanır; eski numara reddedilir; yolu sağlayan komşu "ulaşılamıyor" derse yol silinir |
+| 700 m aralıklı 4 düğüm zinciri | Yollar `2→1`, `3→2→1`, `4→3→2→1`; maliyetler 2, 4, 6 |
+| 400 m aralıklı zincir | Düğüm 3, zayıf doğrudan bağlantı (maliyet 3) yerine iki sağlam hop'u (maliyet 2) seçer |
+| Gateway'e 200 ve 400 m'de iki düğüm | 400 m'deki düğüm sağlam doğrudan bağlantıyı iki hop'a tercih eder |
+| 3x3 ızgara (500 m aralık) | 8 düğümün tümü gateway'e ulaşır (en uzaklar 2 hop) |
+| Döngü taraması | 12 farklı HELLO zamanlaması x 8 düğüm = 96 yol: döngü ve kopukluk yok |
+
+Bulgular: (1) Gateway bilgisi zincirde her HELLO periyodunda bir hop yürür; uçtaki düğümün bilgisi gateway'in bir sıra numarası gerisinde kalır. (2) **Yol kararsızlığı:** iki seçenek arasında kalan düğümlerde (400 m zincirde düğüm 3: 60 sn'de 23 sonraki hop değişimi; ızgarada 2 düğüm: 80 sn'de 31'er) yol, her yeni sıra numarasında zayıf doğrudan bağlantı ile iki sağlam hop arasında gidip gelir. Döngü yoktur, hedefe ulaşılır; ama yol kararlı değildir. Çözümü, yol zaman aşımı ve hata bildirimiyle birlikte self-healing adımında (Adım 07) yapılacak; iyileşme süresi ölçümünden önce kararlı bir taban çizgisi gerekir.
+
+**Sıradaki:** Adım 05, veri iletimi (DATA paketi, TTL, çift paket bastırma, hop-hop ACK).
 
 ## Klasörler
 | Klasör | İçerik |
