@@ -36,3 +36,12 @@ Sabit başlık 8 bayt, ardından yük, ardından 4 bayt doğrulama etiketi. Topl
 - Hop-hop ACK: DATA 1 sn içinde ACK almazsa en fazla 3 kez yeniden gönderilir (yeniden gönderimde güncel yol kullanılır).
 - Yeniden denemeler tükenirse sonraki hop ölü sayılır, yol değişir; yol kalmazsa RERR yayınlanır.
 - Kanal erişimi: göndermeden önce dinle; doluysa rastgele bekle, pencere her denemede ikiye katlanır (en fazla 6 deneme).
+
+## Havadaki bayt dizisi (kablo biçimi)
+`sim/wire.py`: 8 bayt başlık + yük + 4 bayt etiket. Başlık biçimi `>BBBBHBB` (büyük uçlu): `src`, `dst`, `next_hop`, `ptype`, `seq` (2 bayt), `ttl`, `last_hop`. STM32 C kodu aynı biçimi kullanacak ve Python ile uyum testi yapılacak.
+
+## Uygulama yükü (DATA içi, şifreli gider)
+`gateway/receiver/report.py`: `>BhhBB` + metin. Alanlar: tür (1 durum, 2 SOS, 3 sensör), x ve y (işaretli 16 bit, gateway'e göre metre), pil yüzdesi (0-100), kod, ardından en çok 24 baytlık UTF-8 metin.
+
+## Gateway kayıt kimliği
+Her mesajın kimliği `kaynak:sayaç` (sayaç, güvenlik katmanının 32 bit çerçeve sayacı). Veritabanı, köprü kuyruğu ve uzak sunucu bu kimlikle çift kaydı önler (uzak sunucuda `(gateway, uid)` benzersizdir).

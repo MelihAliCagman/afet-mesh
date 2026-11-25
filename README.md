@@ -17,7 +17,7 @@ Baz istasyonu ve elektrik altyapısı çöktüğünde; STM32 saha/röle düğüm
 | Faz | İçerik | Durum |
 |---|---|---|
 | 0 | Python simülasyonu (adım 00-10) | **tamam** |
-| 1 | Raspberry Pi gateway, sahte radyo (adım 11-16) | bekliyor |
+| 1 | Raspberry Pi gateway, sahte radyo (adım 11-16) | **yazılım tamam** (adım 12-16); Pi kurulumu (adım 11) cihaz gelince |
 | 2 | STM32 protokol çekirdeği, UART sahte radyo (adım 17-24) | bekliyor |
 | 3 | Gerçek LoRa (adım 25-28) | bekliyor (modül siparişi gerekli) |
 | 4 | GPS, TFT, ESP8266, IMU, enerji (adım 29-35) | bekliyor |
@@ -88,7 +88,52 @@ Protokolün ayrıntısı: [docs/protokol.md](docs/protokol.md). Ham ölçümler:
 
 **Bilinen sınırlar:** tek ortak ağ anahtarı, hop alanları (ttl, next_hop) doğrulanmaz ([docs/guvenlik.md](docs/guvenlik.md)); bağlantılar simetrik; hassasiyet eşiği SF'den bağımsız; saklı terminal çarpışmaları çözülmedi; sinyal modeli parametreleri varsayım, gerçek donanımda henüz doğrulanmadı; konum deneyinde IMU gürültüsü ve gölgeleme (zamanla ilişkili) modellenmiş değerlerdir, başlangıç noktası biliniyor kabul edilir.
 
-**Faz 0 tamam.** Sıradaki: Faz 1, Raspberry Pi gateway (sahte radyo ile): paket çözücü ve SQLite, dashboard, fırsatçı internet köprüsü.
+**Faz 0 tamam.**
+
+#### Faz 1: Gateway yazılımı, sahte radyo ile (adım 12-16 tamam, 11 Pi gelince)
+Gateway'in yazılımı gerçek radyo ve Raspberry Pi olmadan, bilgisayarda geliştirildi. Simülasyondaki ağ, "sahte radyo" ile gateway'e gerçek bir LoRa radyosu gibi bağlanıyor: havadan gelen her paket güvenli bayt dizisine çevrilip alıcı servise veriliyor. Pi geldiğinde aynı kod olduğu gibi çalışacak ([docs/pi-kurulum.md](docs/pi-kurulum.md)).
+
+| Adım | Modül | Ne yapar |
+|---|---|---|
+| 11 | `docs/pi-kurulum.md`, `gateway/deploy/` | Pi kurulum adımları ve systemd hizmet dosyaları (Pi gelince uygulanacak) |
+| 12 | `gateway/receiver/`, `sim/wire.py` | Paket çözücü, doğrulama (AES-CCM), uygulama yükü, SQLite şeması, ACK üretimi |
+| 13 | `gateway/mockradio.py` | Sahte radyo: simülasyonu gateway'e besler, saldırı ve arıza enjekte eder |
+| 14 | `gateway/dashboard/app.py` | FastAPI sunucusu: düğüm, mesaj, alarm, sağlık özeti, canlı akış (SSE) |
+| 15 | `gateway/dashboard/static/` | Tarayıcı paneli: çevrimdışı harita, düğüm listesi, canlı mesaj ve güvenlik akışı |
+| 16 | `gateway/bridge/`, `remote-server/` | Fırsatçı internet köprüsü: kalıcı kuyruk, bağlantı izleyici, uzak sunucu, çift kayıt önleme |
+
+Çalıştırma (proje kökünden, venv açıkken):
+```
+python -m gateway.mockradio                       # sahte radyo ile veri akışı ve saldırı denemeleri
+python -m gateway.dashboard.app --demo            # paneli aç: http://127.0.0.1:8000 (canlı demo)
+python -m gateway.bridge.demo                     # internet kes/aç ve köprü çökmesi demosu
+python -m pytest gateway/tests sim/tests -q       # 38 birim test
+```
+
+![Gateway paneli](docs/olcumler/panel-ekran.png)
+
+**Ana sonuçlar**
+
+| Konu | Sonuç |
+|---|---|
+| Sahte radyo, 3x3 ızgara, 300 sn | 115 rapor gönderildi, 112'si gateway'e ulaştı; veritabanındaki mesaj sayısı simülasyondaki gateway ile birebir aynı (112) |
+| Yeniden gönderimler | 16 özdeş kare `dup` olarak ayrıldı, çift kayıt yok, yanlış alarm yok (297 HELLO, 112 DATA geçerli) |
+| Saldırı enjeksiyonu (tekrar oynatma, sahte etiket, klon) | 0 mesaj eklendi; `replay`, `bad_tag`, `regression` ve `klon_alarmi` olayları kaydedildi |
+| Düğüm arızası (düğüm 5 kapatıldı) | Panelde durum "canlı" → "gecikmiş" → "kayıp"; kalan 7 düğüm raporlamaya devam etti |
+| Köprü: internet 120-300 sn arası kesik | Kuyruk 0 → 148 mesaja çıktı, bağlantı gelince boşaldı |
+| Köprü: yükleme sırasında çökme (t = 330 sn) | Sunucu 7 mesajı almıştı ama işaretlenmemişti; yeniden başlayan köprü tekrar yolladı, sunucu 7 çiftin hepsini reddetti |
+| Köprü uçtan uca (480 sn) | Gateway'de 375, uzak sunucuda 375 mesaj, kuyrukta 0: kayıp yok, çift yok |
+| Köprü geri çekilme (sunucu 500 döndürürse) | Bekleme 2, 4, 8, 16 sn (üstel), bağlantı gelince sıfırlanır |
+
+**Bulgular**
+- Radyo seviyesinde aynı paketin birden çok kopyası normaldir (yeniden gönderim). Kopya ile tekrar oynatma saldırısını ayırt etmek için zaman penceresi kullanıldı: 30 sn içinde gelen özdeş kare `dup`, daha sonrası `replay`. Pencere olmadan normal çalışmada yanlış alarm veriyordu.
+- Veritabanı kayıt kimliği `kaynak:sayaç` olduğundan aynı mesaj ikinci kez eklenemez; köprü kuyruğu ve uzak sunucu da aynı kimlikle çift kaydı önler. Güvenilirlik "en az bir kez gönderim + tekil kayıt" ile sağlanır.
+- Köprü, sunucu "aldım" demeden kaydı işaretlemez; çökme olursa en kötü ihtimalle tekrar yollanır, kaybolmaz.
+- Panel tarayıcıdan yalnızca yerel dosyalarla çalışır (harita altlığı internetten gelmez), yani afet anında internet olmadan açılır.
+
+**Sınırlar:** gerçek LoRa radyosu ve Pi henüz yok (sahte radyo simülasyon çıktısıdır); gateway güvenlik sayaçları bellekte tutulur (yeniden başlatmada son sayaç unutulur); konumlar GPS değil, düğümlerin bildirdiği koordinatlardır; uzak sunucu tek kullanıcı API anahtarıyla korunur ve TLS yoktur (demo).
+
+**Sıradaki:** Faz 2, STM32 protokol çekirdeği: önce bilgisayarda derlenen donanımdan bağımsız C kodu (paket serileştirme, HELLO, yönlendirme) ve Python ile uyum testleri, ardından kartlarda UART üzerinden sahte radyo.
 
 ## Klasörler
 | Klasör | İçerik |
