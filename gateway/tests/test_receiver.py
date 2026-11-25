@@ -81,11 +81,17 @@ def test_tampered_and_forged_rejected():
 
 
 def test_replay_raises_alarm_and_is_not_stored():
-    db, gw, node = make()
+    t = [0.0]
+    db = Database()
+    gw = Gateway(db, KEY, clock=lambda: t[0])
+    node = Sender(5, KEY, PersistentCounter({}, block=64))
     old = data_frame(node)
     gw.on_frame(old)
     for _ in range(3):
         gw.on_frame(data_frame(node))
+    gw.on_frame(old)
+    assert not any(a["kind"] == "replay" for a in db.alarms())  # kısa süre: yeniden gönderim
+    t[0] += 120
     gw.on_frame(old)
     assert any(a["kind"] == "replay" for a in db.alarms())
     assert db.message_count() == 4

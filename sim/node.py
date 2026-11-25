@@ -26,6 +26,7 @@ class MeshNode:
         self.rerr_on = rerr_on
         self.alive = True
         self.sent_at = {}
+        self.tap = None
         self.gw_seq = 0
         self.csma = csma
         self.backoffs = 0
@@ -169,6 +170,8 @@ class MeshNode:
     def on_receive(self, packet, rssi):
         if not self.alive:
             return
+        if self.tap is not None:
+            self.tap(packet, rssi)
         if packet.ptype == PacketType.HELLO:
             self.table.update(packet.src, rssi, self.sim.now)
             if packet.payload and not self.node.is_gateway:

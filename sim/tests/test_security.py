@@ -35,12 +35,15 @@ def test_hop_fields_not_authenticated():
 
 
 def test_duplicate_and_replay():
-    rx, tx = Receiver(KEY), make()
+    t = [0.0]
+    rx, tx = Receiver(KEY, clock=lambda: t[0]), make()
     frames = [tx.seal(GW, GW, PacketType.DATA, b"x") for _ in range(5)]
     for f in frames:
         assert rx.open(f)[0] == "ok"
     assert rx.open(frames[-1])[0] == "dup"
-    assert rx.open(frames[1])[0] == "replay"
+    assert rx.open(frames[1])[0] == "dup"  # kısa süre içinde: yeniden gönderim
+    t[0] += 120
+    assert rx.open(frames[1])[0] == "replay"  # uzun süre sonra: tekrar oynatma
 
 
 def test_counter_rollover():

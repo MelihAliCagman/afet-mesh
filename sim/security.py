@@ -13,6 +13,7 @@ MAX_JUMP = 1024
 HISTORY = 64
 ALARM_COUNT = 3
 ALARM_WINDOW = 60.0
+DUP_WINDOW = 30.0
 
 
 def load_key():
@@ -110,12 +111,14 @@ class Receiver:
                     self._note(pkt.src, "jump")
                     return "jump", None
                 self.last[pkt.src] = c
-                hist[c] = pkt.tag
+                hist[c] = (pkt.tag, self.clock())
                 if len(hist) > HISTORY:
                     hist.pop(min(hist))
                 return "ok", data
-            if hist.get(c) == pkt.tag:
-                return ("dup" if c == last else "replay"), None
+            seen = hist.get(c)
+            if seen is not None and seen[0] == pkt.tag:
+                # Özdeş kare: kısa süre içindeyse yeniden gönderim (dup), değilse tekrar oynatma (replay)
+                return ("dup" if c == last or self.clock() - seen[1] <= DUP_WINDOW else "replay"), None
             self._note(pkt.src, "regression")
             return "regression", None
         return "bad_tag", None
@@ -147,7 +150,9 @@ if __name__ == "__main__":
 
     print("== 3. Tekrar oynatma (replay)")
     print("  aynı kare tekrar (hemen)  :", rx.open(g)[0])
-    print("  eski kare (kare 2)        :", rx.open(frames[1])[0])
+    print("  eski kare, 2 sn sonra     :", rx.open(frames[1])[0], "(yeniden gönderim sayılır)")
+    t[0] += 120
+    print("  eski kare, 2 dk sonra     :", rx.open(frames[1])[0])
 
     print("== 4. 16 bit sıra numarası taşması (sayaç 32 bit)")
     n2 = Sender(7, key, counter=PersistentCounter({"ctr": 65450}, block=64))
