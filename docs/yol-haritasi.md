@@ -18,7 +18,7 @@ Amaç: protokolü donanımsız tasarlayıp doğrulamak, ilk grafikleri üretmek.
 | 03 | [x] Paket yapısı, HELLO, komşu tablosu | Paket alanları, periyodik HELLO, komşu tablosu (ID, RSSI, son görülme) | ✅ |
 | 04 | [x] Distance-vector yönlendirme | Gateway'e mesafe, sıra numarası, en iyi komşu seçimi, döngü önleme | ✅ |
 | 05 | [x] Veri iletimi | DATA paketi, TTL, çift paket bastırma, hop-hop ACK, sınırlı yeniden deneme | ✅ |
-| 06 | [ ] Kanal erişimi | Çarpışma modeli, dinle-sonra-konuş, rastgele backoff | ✅ |
+| 06 | [x] Kanal erişimi | Çarpışma modeli, dinle-sonra-konuş, rastgele backoff | ✅ |
 | 07 | [ ] Self-healing | Düğüm arızası, HELLO zaman aşımı, RERR, alternatif rota, **iyileşme süresi** ölçümü | ✅ |
 | 08 | [ ] Deney altyapısı | PDR, gecikme, iyileşme süresi; çoklu tekrar, CSV çıktı, Matplotlib grafikleri | ✅ |
 | 09 | [ ] GPS'siz konum prototipi | RSSI→mesafe, multilateration, IMU ölü hesap, Kalman filtresi, hata (m) analizi | ✅ |

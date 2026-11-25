@@ -8,10 +8,12 @@ from sim.packet import Packet, PacketType, BROADCAST
 
 DATA_TTL = 8
 SEEN_LIMIT = 256
+BACKOFF_SLOT = 0.05
+MAX_BACKOFF = 6
 
 
 class MeshNode:
-    def __init__(self, node, sim, radio, hello_period=5.0, timeout=15.0, seed=0, max_retry=3, ack_timeout=1.0):
+    def __init__(self, node, sim, radio, hello_period=5.0, timeout=15.0, seed=0, max_retry=3, ack_timeout=1.0, csma=False):
         self.node = node
         self.sim = sim
         self.radio = radio
@@ -20,6 +22,8 @@ class MeshNode:
         self.seq = 0
         self.routes = RoutingTable()
         self.gw_seq = 0
+        self.csma = csma
+        self.backoffs = 0
         self.max_retry = max_retry
         self.ack_timeout = ack_timeout
         self.pending = {}
@@ -47,7 +51,7 @@ class MeshNode:
         else:
             payload = b""
         hello = Packet(self.node.node_id, BROADCAST, BROADCAST, PacketType.HELLO, self.seq, 1, payload)
-        self.radio.transmit(self.node, hello)
+        self.mac_send(hello)
         self.sim.schedule(self.hello_period, self.send_hello)
 
     def send_data(self, payload, gateway_id=1):
@@ -87,11 +91,19 @@ class MeshNode:
             return
         self.tx_data(replace(pkt, next_hop=r.next_hop, ttl=pkt.ttl - 1))
 
+    def mac_send(self, pkt, attempt=0):
+        if self.csma and attempt < MAX_BACKOFF and self.radio.busy(self.node):
+            self.backoffs += 1
+            window = BACKOFF_SLOT * (2 ** min(attempt + 1, 5))
+            self.sim.schedule(self.rng.uniform(0.0, window), lambda: self.mac_send(pkt, attempt + 1))
+            return
+        self.radio.transmit(self.node, pkt)
+
     def tx_data(self, pkt, tries=0):
         pkt = replace(pkt, last_hop=self.node.node_id)
         key = (pkt.src, pkt.seq)
         self.pending[key] = (pkt, tries)
-        self.radio.transmit(self.node, pkt)
+        self.mac_send(pkt)
         self.sim.schedule(self.ack_timeout, lambda: self.on_timeout(key, tries))
 
     def on_timeout(self, key, tries):
@@ -114,7 +126,7 @@ class MeshNode:
     def send_ack(self, pkt):
         ack = Packet(self.node.node_id, pkt.last_hop, pkt.last_hop, PacketType.ACK,
                      pkt.seq, 1, bytes([pkt.src]), self.node.node_id)
-        self.radio.transmit(self.node, ack)
+        self.mac_send(ack)
 
     def on_ack(self, pkt):
         if pkt.next_hop != self.node.node_id:
@@ -154,11 +166,11 @@ if __name__ == "__main__":
     from sim.mesh_sim import Node
     from sim.radio import Radio
 
-    def build_mesh(positions, seed=0, loss=0.0, max_retry=3):
+    def build_mesh(positions, seed=0, loss=0.0, max_retry=3, collide=False, csma=False):
         sim = Simulator()
         nodes = [Node(i + 1, x, y, is_gateway=(i == 0)) for i, (x, y) in enumerate(positions)]
-        radio = Radio(sim, nodes, loss=loss, seed=seed)
-        mesh = [MeshNode(n, sim, radio, seed=seed, max_retry=max_retry) for n in nodes]
+        radio = Radio(sim, nodes, loss=loss, seed=seed, collide=collide)
+        mesh = [MeshNode(n, sim, radio, seed=seed, max_retry=max_retry, csma=csma) for n in nodes]
         for m in mesh:
             m.start()
         return sim, mesh
@@ -228,3 +240,31 @@ if __name__ == "__main__":
     for loss in (0.0, 0.2, 0.4):
         for retry in (0, 3):
             ack_demo(loss, retry)
+
+    def mac_demo(collide, csma, max_retry, seeds=8, count=10):
+        grid = [(x * 500.0, y * 500.0) for y in range(3) for x in range(3)]
+        sent = got = retx = back = col = giveup = 0
+        for seed in range(seeds):
+            sim, mesh = build_mesh(grid, seed, 0.0, max_retry, collide, csma)
+            sim.run(until=60)
+            rng = random.Random(seed)
+            for m in mesh[1:]:
+                off = rng.uniform(0.0, 4.0)
+                for i in range(count):
+                    sim.schedule(off + i * 4.0, lambda m=m: m.send_data(b"x"))
+            sim.run(until=60 + count * 4 + 30)
+            sent += count * 8
+            got += len(mesh[0].delivered)
+            retx += sum(m.retx for m in mesh)
+            back += sum(m.backoffs for m in mesh)
+            giveup += sum(m.dropped["retry"] for m in mesh)
+            col += mesh[0].radio.collisions
+        print(f"çarpışma {'var ' if collide else 'yok'} | CSMA {'var ' if csma else 'yok'} | deneme {max_retry} | "
+              f"PDR %{100*got/sent:5.1f} | çarpışan alım {col:5d} | backoff {back:5d} | yeniden gönderim {retx:5d} | vazgeçilen {giveup:3d}")
+
+    print("== G: 3x3 ızgara, 8 düğüm eşzamanlı veri (4 sn arayla 10 paket), 8 tohum")
+    mac_demo(False, False, 3)
+    mac_demo(True, False, 0)
+    mac_demo(True, False, 3)
+    mac_demo(True, True, 0)
+    mac_demo(True, True, 3)

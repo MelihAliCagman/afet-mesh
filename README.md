@@ -16,7 +16,7 @@ Baz istasyonu ve elektrik altyapısı çöktüğünde; STM32 saha/röle düğüm
 
 | Faz | İçerik | Durum |
 |---|---|---|
-| 0 | Python simülasyonu (adım 00-10) | **devam ediyor** (adım 05 tamam) |
+| 0 | Python simülasyonu (adım 00-10) | **devam ediyor** (adım 06 tamam) |
 | 1 | Raspberry Pi gateway, sahte radyo (adım 11-16) | bekliyor |
 | 2 | STM32 protokol çekirdeği, UART sahte radyo (adım 17-24) | bekliyor |
 | 3 | Gerçek LoRa (adım 25-28) | bekliyor (modül siparişi gerekli) |
@@ -100,7 +100,20 @@ Bulgular: (1) Gateway bilgisi zincirde her HELLO periyodunda bir hop yürür; u�
 
 Bulgular: (1) Hop-hop ACK, 3 hop'lu zincirde %40 paket kaybında bile teslim oranını %29,5'ten %91,5'e çıkarır; kayıp hop sayısıyla çarpıldığı için uçtan uca ACK yerine hop-hop ACK seçildi. (2) Bedeli kanal yüküdür: kayıp arttıkça yeniden gönderim ve çift paket artar, bu da airtime ve duty cycle tüketir. (3) ACK kaybolduğunda gönderen paketi tekrar yollar; alıcı çifti bastırır ama yine de ACK yollar, yoksa gönderen vazgeçene kadar tekrar eder. (4) Kayıp modeli bağımsız ve simetriktir; çarpışma ve asimetrik bağlantılar sonraki adımlarda eklenecek.
 
-**Sıradaki:** Adım 06, kanal erişimi (çarpışma modeli, dinle-sonra-konuş, rastgele backoff).
+**Adım 06: Kanal erişimi** (`sim/radio.py`, `sim/node.py`). Radyoya çarpışma modeli eklendi: aynı alıcıda zamanca üst üste binen iki alım birlikte bozulur; konuşan düğüm aynı anda dinleyemez (yarı çift yönlü). Düğümler CSMA uygular: göndermeden önce kanalı dinler, doluysa rastgele süre bekler; bekleme penceresi her denemede ikiye katlanır (üstel backoff, en fazla 6 deneme, sonra yine de gönderir). Çarpışma modeli varsayılan kapalıdır, böylece önceki adımların sonuçları aynı kalır.
+
+| Test | Sonuç |
+|---|---|
+| Düğüm 1 ve 3 birbirini duymaz, ikisi de 2'ye aynı anda yollar | Model kapalı: 2 ikisini alır; açık: hiçbirini alamaz (2 çarpışan alım) |
+| 3x3 ızgara, 8 düğüm eşzamanlı veri, çarpışma yok, 3 deneme | PDR %100 |
+| Çarpışma var, CSMA yok, yeniden deneme yok | PDR %41,6 (4968 çarpışan alım) |
+| Çarpışma var, CSMA yok, 3 deneme | PDR %35,5 (19259 çarpışan alım) |
+| Çarpışma var, CSMA var, yeniden deneme yok | PDR %92,0 (973 çarpışan alım) |
+| Çarpışma var, CSMA var, 3 deneme | PDR %98,6 (1492 çarpışan alım, 179 yeniden gönderim) |
+
+Bulgular: (1) Çarpışma modeli açılınca PDR %100'den %41,6'ya düşer; önceki adımların sonuçları iyimserdi. (2) CSMA tek başına PDR'yi %92'ye, CSMA ve ACK birlikte %98,6'ya çıkarır. (3) CSMA olmadan yeniden deneme durumu kötüleştirir (%41,6 → %35,5): çarpışan paketlerin tekrarı kanalı doldurur ve çarpışmalar 4968'den 19259'a çıkar; yani güvenilirlik katmanı kanal erişimiyle birlikte tasarlanmalıdır. (4) CSMA saklı terminal sorununu çözmez (birbirini duymayan iki düğüm yine çarpışır); kalan çarpışmalar buradan ve aynı backoff değerinin seçilmesinden gelir.
+
+**Sıradaki:** Adım 07, self-healing (düğüm arızası, HELLO zaman aşımı, RERR, alternatif rota, iyileşme süresi).
 
 ## Klasörler
 | Klasör | İçerik |
