@@ -130,9 +130,10 @@ python -m pytest gateway/tests sim/tests -q       # 38 birim test
 - Radyo seviyesinde aynı paketin birden çok kopyası normaldir (yeniden gönderim). Kopya ile tekrar oynatma saldırısını ayırt etmek için zaman penceresi kullanıldı: 30 sn içinde gelen özdeş kare `dup`, daha sonrası `replay`. Pencere olmadan normal çalışmada yanlış alarm veriyordu.
 - Veritabanı kayıt kimliği `kaynak:sayaç` olduğundan aynı mesaj ikinci kez eklenemez; köprü kuyruğu ve uzak sunucu da aynı kimlikle çift kaydı önler. Güvenilirlik "en az bir kez gönderim + tekil kayıt" ile sağlanır.
 - Köprü, sunucu "aldım" demeden kaydı işaretlemez; çökme olursa en kötü ihtimalle tekrar yollanır, kaybolmaz.
+- Gateway yeniden başlarsa sayaçlar korunmazsa iki sorun çıkar: tekrar oynatma penceresi yeniden açılır ve gateway'in ACK/HELLO sayaçları geri dönüp düğümler tarafından reddedilir (firmware testlerinde ölçüldü: kalıcı olmadan düğümler boşuna yeniden dener, kalıcıyla yeniden gönderim 0).
 - Panel tarayıcıdan yalnızca yerel dosyalarla çalışır (harita altlığı internetten gelmez), yani afet anında internet olmadan açılır.
 
-**Sınırlar:** gerçek LoRa radyosu henüz yok (sahte radyo simülasyon çıktısıdır); gateway güvenlik sayaçları bellekte tutulur (yeniden başlatmada son sayaç unutulur); konumlar GPS değil, düğümlerin bildirdiği koordinatlardır; uzak sunucu tek kullanıcı API anahtarıyla korunur ve TLS yoktur (demo).
+**Sınırlar:** gerçek LoRa radyosu henüz yok (sahte radyo simülasyon çıktısıdır); gateway güvenlik sayaçları ve ACK/HELLO sayaçları SQLite'ta kalıcıdır (yeniden başlatmada korunur, SD kart aşınmasını azaltmak için en çok 5 sn'de bir toplu yazılır); konumlar GPS değil, düğümlerin bildirdiği koordinatlardır; uzak sunucu tek kullanıcı API anahtarıyla korunur ve TLS yoktur (demo).
 
 **Sıradaki:** Faz 2, STM32 protokol çekirdeği: önce bilgisayarda derlenen donanımdan bağımsız C kodu (paket serileştirme, HELLO, yönlendirme) ve Python ile uyum testleri, ardından kartlarda UART üzerinden sahte radyo.
 

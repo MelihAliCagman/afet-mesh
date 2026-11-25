@@ -77,6 +77,7 @@ class Receiver:
         self.seen = {}
         self.events = {}
         self.alarms = []
+        self.dirty = set()
 
     def _try(self, pkt, counter):
         try:
@@ -94,6 +95,15 @@ class Receiver:
         bad = sum(1 for _, k in ev if k in ("regression", "jump"))
         if bad >= ALARM_COUNT and not any(a[0] == src and now - a[1] < ALARM_WINDOW for a in self.alarms):
             self.alarms.append((src, now))
+
+    def export_peer(self, src):
+        """Kalıcı saklama için bir kaynağın durumu: (son sayaç, [(sayaç, etiket, zaman), ...])"""
+        hist = [(c, tag, t) for c, (tag, t) in sorted(self.seen.get(src, {}).items())]
+        return self.last[src], hist
+
+    def import_peer(self, src, last, hist):
+        self.last[src] = last
+        self.seen[src] = {c: (tag, t) for c, tag, t in hist}
 
     def open(self, pkt):
         # Dönüş: (durum, açık yük). Durumlar: ok, dup, replay, regression, jump, bad_tag
@@ -113,6 +123,7 @@ class Receiver:
                     return "jump", None
                 self.last[pkt.src] = c
                 hist[c] = (pkt.tag, self.clock())
+                self.dirty.add(pkt.src)
                 if len(hist) > HISTORY:
                     hist.pop(min(hist))
                 return "ok", data
@@ -123,6 +134,7 @@ class Receiver:
             if c >= last - LATE_WINDOW and c not in hist:
                 # Çok sekmeli ağda paketler sıra dışı gelebilir: pencere içindeki görülmemiş sayaç kabul edilir
                 hist[c] = (pkt.tag, self.clock())
+                self.dirty.add(pkt.src)
                 return "ok", data
             self._note(pkt.src, "regression")
             return "regression", None

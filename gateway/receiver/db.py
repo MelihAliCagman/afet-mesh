@@ -34,6 +34,16 @@ CREATE TABLE IF NOT EXISTS rx_stats (
     status TEXT PRIMARY KEY,
     count INTEGER NOT NULL DEFAULT 0
 );
+CREATE TABLE IF NOT EXISTS security_state (
+    src INTEGER PRIMARY KEY,
+    last INTEGER NOT NULL,
+    hist TEXT NOT NULL,
+    updated REAL NOT NULL
+);
+CREATE TABLE IF NOT EXISTS kv (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS outbox (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     uid TEXT NOT NULL UNIQUE,
@@ -120,6 +130,32 @@ class Database:
 
     def rx_stats(self):
         return {r["status"]: r["count"] for r in self._all("SELECT * FROM rx_stats")}
+
+    # ---- güvenlik durumu (yeniden başlatmada sayaçlar korunur) ----
+    def save_peer_states(self, rows, now):
+        """rows: [(src, last, hist_listesi)] tek işlemde yazılır (SD kart aşınmasını azaltmak için toplu)."""
+        with self.lock:
+            self.conn.executemany(
+                "INSERT INTO security_state(src, last, hist, updated) VALUES (?,?,?,?) "
+                "ON CONFLICT(src) DO UPDATE SET last=excluded.last, hist=excluded.hist, updated=excluded.updated",
+                [(src, last, json.dumps([[c, tag.hex(), t] for c, tag, t in hist]), now) for src, last, hist in rows])
+            self.conn.commit()
+
+    def load_peer_states(self):
+        out = []
+        for r in self._all("SELECT src, last, hist FROM security_state"):
+            out.append((r["src"], r["last"], [(c, bytes.fromhex(tag), t) for c, tag, t in json.loads(r["hist"])]))
+        return out
+
+    def kv_get(self, key, default=None):
+        r = self._one("SELECT value FROM kv WHERE key=?", (key,))
+        return r["value"] if r else default
+
+    def kv_set(self, key, value):
+        with self.lock:
+            self.conn.execute("INSERT INTO kv(key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                              (key, str(value)))
+            self.conn.commit()
 
     # ---- giden kutusu (köprü kuyruğu) ----
     def enqueue(self, uid, body, now):

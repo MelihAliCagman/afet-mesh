@@ -53,3 +53,8 @@ Her mesajın kimliği `kaynak:sayaç` (sayaç, güvenlik katmanının 32 bit çe
 - Hop alanları (`next_hop`, `ttl`, `last_hop`) mühürlenmez; röle yalnızca bu baytları değiştirip kareyi aynen iletir, şifreyi çözmeden etiketi doğrular.
 - Geç kabul penceresi: sayacı son kabul edilenden en çok 32 geride ve daha önce görülmemiş kare kabul edilir (sıra dışı gelen paketler).
 - Zaman 32 bit milisaniye tamsayısıdır; radyo, rastgelelik ve teslim `afet_radio_if_t` ile verilir.
+
+## Gateway durumu (Pi)
+- ACK yükü 3 bayt (kaynak + sıra numarası), firmware ile aynı. Gateway periyodik HELLO yayınlar (`gw_seq`, maliyet 0).
+- Yeniden başlatmada kalıcı olanlar: her düğümün son sayacı ve son kareleri (tekrar oynatma koruması), gateway'in kendi çerçeve sayacı, `gw_seq`.
+  Bunlar geri dönerse düğümler gateway'in ACK ve HELLO karelerini "eski" sayıp reddeder.

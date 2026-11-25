@@ -2,31 +2,85 @@ import time
 
 from gateway.receiver.db import Database
 from gateway.receiver.report import KIND_NAMES, decode_report
-from sim.packet import Packet, PacketType
-from sim.security import Receiver, Sender
+from sim.packet import BROADCAST, Packet, PacketType
+from sim.routing import encode_hello
+from sim.security import PersistentCounter, Receiver, Sender
 from sim.wire import decode, encode
 
 GATEWAY_ID = 1
+FLUSH_SECONDS = 5.0
+
+
+class DbDict:
+    """PersistentCounter'ın beklediği sözlük arayüzü; değerleri veritabanındaki kv tablosunda saklar."""
+
+    def __init__(self, db, prefix):
+        self.db = db
+        self.prefix = prefix
+
+    def get(self, key, default=0):
+        v = self.db.kv_get(f"{self.prefix}:{key}")
+        return int(v) if v is not None else default
+
+    def __setitem__(self, key, value):
+        self.db.kv_set(f"{self.prefix}:{key}", value)
 
 
 class Gateway:
     """Havadan gelen ham baytı doğrular, çözer, veritabanına yazar ve gerekirse ACK üretir."""
 
-    def __init__(self, db, key, gw_id=GATEWAY_ID, clock=time.time):
+    def __init__(self, db, key, gw_id=GATEWAY_ID, clock=time.time, persist=True, flush_s=FLUSH_SECONDS):
         self.db = db
         self.gw_id = gw_id
         self.clock = clock
+        self.persist = persist
+        self.flush_s = flush_s
+        self._last_flush = clock()
         self.rx = Receiver(key, clock=clock)
-        self.tx = Sender(gw_id, key)
+        if persist:
+            # Yeniden başlatmada her düğümün son sayacı ve son kareleri yüklenir: tekrar oynatma penceresi açılmaz.
+            for src, last, hist in db.load_peer_states():
+                self.rx.import_peer(src, last, hist)
+            # Gateway'in kendi (ACK) sayacı da geri dönmemeli; yoksa düğümler ACK'leri "eski" sayıp reddeder.
+            self.tx = Sender(gw_id, key, PersistentCounter(DbDict(db, "gw_counter"), block=64))
+        else:
+            self.tx = Sender(gw_id, key)
         self._alarm_seen = 0
 
+    def flush(self):
+        """Değişen güvenlik durumlarını tek işlemde yazar."""
+        if not self.persist or not self.rx.dirty:
+            return
+        rows = []
+        for src in sorted(self.rx.dirty):
+            last, hist = self.rx.export_peer(src)
+            rows.append((src, last, hist))
+        self.rx.dirty.clear()
+        self.db.save_peer_states(rows, self.clock())
+        self._last_flush = self.clock()
+
+    def close(self):
+        self.flush()
+
     def _ack(self, pkt):
-        ack = self.tx.seal(pkt.last_hop, pkt.last_hop, PacketType.ACK, bytes([pkt.src]), ttl=1)
+        # Güvenli protokolde ACK yükü 3 bayt: onaylanan paketin kaynağı ve sıra numarası (docs/protokol.md)
+        payload = bytes([pkt.src, (pkt.seq >> 8) & 0xFF, pkt.seq & 0xFF])
+        ack = self.tx.seal(pkt.last_hop, pkt.last_hop, PacketType.ACK, payload, ttl=1)
         return encode(ack)
+
+    def hello_frame(self):
+        """Gateway'in periyodik HELLO'su: düğümler bundan gateway'e giden yolu öğrenir. Sıra numarası kalıcıdır
+        (yeniden başlatmada geri dönerse düğümler yeni ilanları 'eski' sayıp yok sayar)."""
+        seq = (int(self.db.kv_get("gw_seq", 0)) + 1) % 65536
+        self.db.kv_set("gw_seq", seq)
+        hello = self.tx.seal(BROADCAST, BROADCAST, PacketType.HELLO, encode_hello(seq, 0, 0), ttl=1)
+        return encode(hello)
 
     def on_frame(self, raw, rssi=None):
         """Bir kare işler. Dönüş: gönderilmesi gereken kareler (ACK) listesi."""
         now = self.clock()
+        if self.persist and now - self._last_flush >= self.flush_s:
+            self.flush()
         try:
             pkt = decode(raw)
         except ValueError:
