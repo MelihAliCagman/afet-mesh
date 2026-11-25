@@ -1,0 +1,13 @@
+[Unit]
+Description=Afet Mesh gateway paneli
+After=network.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/afet-mesh
+EnvironmentFile=/home/pi/afet-mesh/.env
+ExecStart=/home/pi/afet-mesh/venv/bin/python -m gateway.dashboard.app --db /home/pi/afet-mesh/gateway.db --port 8000
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

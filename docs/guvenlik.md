@@ -14,7 +14,7 @@ Simülasyondaki prototip: `sim/security.py`. STM32 uygulaması Adım 23'te aynı
 - **Nonce (12 bayt):** kaynak (1) + paket türü (1) + 32 bit sayaç (4) + 6 sıfır. Aynı anahtarla aynı nonce'un tekrar kullanılması CCM'i bozar; bu yüzden sayaç asla tekrar etmemeli.
 - **Sayaç:** her düğümün 32 bit çerçeve sayacı. Pakette yalnızca alt 16 bit (`seq`) taşınır; alıcı üst 16 biti önceki sayaçtan çıkarır (taşmayı da kapsar). Ek bayt maliyeti yoktur.
 - **Doğrulanan başlık (AAD):** `src`, `dst`, `ptype`, `seq`. Hop'ta değişen `next_hop`, `ttl`, `last_hop` doğrulanmaz.
-- **Anahtar:** repoda tutulmaz. `AFET_KEY_HEX` ortam değişkeninden okunur (yoksa süreç için rastgele üretilir). Gerçek cihazda anahtar flash'ta, repoda yalnızca `.env.example`.
+- **Anahtar:** repoda tutulmaz. `MESH_AES_KEY` ortam değişkeninden okunur (yoksa süreç için rastgele üretilir). Gerçek cihazda anahtar flash'ta, repoda yalnızca `.env.example`.
 
 ## Alıcı kuralları
 | Durum | Anlamı | Davranış |

@@ -18,7 +18,7 @@ DUP_WINDOW = 30.0
 
 def load_key():
     # Anahtar repoda tutulmaz: ortam değişkeninden okunur, yoksa süreç için rastgele üretilir.
-    h = os.environ.get("AFET_KEY_HEX")
+    h = os.environ.get("MESH_AES_KEY")
     return bytes.fromhex(h) if h else os.urandom(16)
 
 

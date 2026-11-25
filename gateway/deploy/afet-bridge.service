@@ -1,0 +1,14 @@
+[Unit]
+Description=Afet Mesh fırsatçı internet köprüsü
+After=network.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/afet-mesh
+EnvironmentFile=/home/pi/afet-mesh/.env
+ExecStart=/home/pi/afet-mesh/venv/bin/python -m gateway.bridge.run
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

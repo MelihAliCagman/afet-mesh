@@ -2,3 +2,6 @@
 matplotlib
 pytest
 cryptography
+fastapi
+uvicorn
+httpx
