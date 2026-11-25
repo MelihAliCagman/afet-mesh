@@ -36,3 +36,4 @@ Release/
 .DS_Store
 Thumbs.db
 firmware/tests/build/
+firmware/build/
