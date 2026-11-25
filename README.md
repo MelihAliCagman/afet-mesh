@@ -16,7 +16,7 @@ Baz istasyonu ve elektrik altyapısı çöktüğünde; STM32 saha/röle düğüm
 
 | Faz | İçerik | Durum |
 |---|---|---|
-| 0 | Python simülasyonu (adım 00-10) | **devam ediyor** (adım 08 tamam) |
+| 0 | Python simülasyonu (adım 00-10) | **devam ediyor** (adım 09 tamam) |
 | 1 | Raspberry Pi gateway, sahte radyo (adım 11-16) | bekliyor |
 | 2 | STM32 protokol çekirdeği, UART sahte radyo (adım 17-24) | bekliyor |
 | 3 | Gerçek LoRa (adım 25-28) | bekliyor (modül siparişi gerekli) |
@@ -25,7 +25,7 @@ Baz istasyonu ve elektrik altyapısı çöktüğünde; STM32 saha/röle düğüm
 
 ### Tamamlanan fazlar ve test sonuçları
 
-#### Faz 0: Python simülasyonu (adım 00-08 tamam, 09-10 sırada)
+#### Faz 0: Python simülasyonu (adım 00-09 tamam, 10 sırada)
 Protokol önce donanımsız, bilgisayarda tasarlanıp ölçülüyor. Simülasyon: düğümler 2D düzlemde, log-mesafe yol kaybı modeliyle RSSI, olay tabanlı zaman, gerçek LoRa airtime formülü ve %1 duty cycle sayacı.
 
 | Adım | Modül | Ne yapar |
@@ -39,11 +39,14 @@ Protokol önce donanımsız, bilgisayarda tasarlanıp ölçülüyor. Simülasyon
 | 06 | `sim/radio.py`, `node.py` | Çarpışma modeli, CSMA, üstel backoff |
 | 07 | `sim/routing.py`, `node.py` | Yedek aday tablosu, histerezis, ACK hatası tespiti, RERR, iyileşme süresi |
 | 08 | `sim/experiment.py` | Çok tekrarlı deneyler, CSV ve grafik üretimi |
+| 09 | `sim/localization/` | GPS'siz konum: RSSI'dan mesafe, multilateration, IMU ölü hesap, Kalman filtresi |
 
 Çalıştırma (proje kökünden, venv açıkken):
 ```
 python -m sim.node          # yönlendirme, veri, ACK, CSMA ve self-healing deneyleri
 python -m sim.experiment    # 10 tohumlu taramalar, docs/olcumler/ altına CSV ve grafik
+python -m sim.localization.multilat   # RSSI ile konum (çapa sayısı ve gürültü taraması)
+python -m sim.localization.fusion     # IMU + RSSI + Kalman, hata grafiği
 ```
 Protokolün ayrıntısı: [docs/protokol.md](docs/protokol.md). Ham ölçümler: [docs/olcumler/](docs/olcumler/).
 
@@ -59,20 +62,26 @@ Protokolün ayrıntısı: [docs/protokol.md](docs/protokol.md). Ham ölçümler:
 | İyileşme süresi (yalnız HELLO zaman aşımı) | Zaman aşımına (3 x HELLO periyodu) eşit: periyot 5 sn → 14,5 sn, 60 sn → 169 sn |
 | İyileşme süresi (+ ACK hatası tespiti) | Periyottan bağımsız yaklaşık 5 sn (trafik varken) |
 | Yük (CSMA ile, 8 düğüm) | Düğüm başına 4 sn'de bir pakette %99,5 teslim; 2 sn'de doyar (%66,5) |
+| Yalnız RSSI ile konum (900 x 900 m, 5 çapa) | Gölgeleme 2 / 4 / 6 / 8 dB iken ortalama hata 88 / 158 / 219 / 266 m |
+| IMU + RSSI + Kalman (sigma 4 dB, 60 dk) | Kalman hatayı sınırda tutar (≈ 50-150 m); yalnız IMU sapmaya bağlı olarak 40-200 m'ye kayar |
 
 ![İyileşme süresi ve HELLO bedeli](docs/olcumler/sekil-iyilesme-suresi.png)
 
 ![Yük, PDR ve gecikme](docs/olcumler/sekil-yuk-pdr.png)
+
+![Konum hatası: IMU, RSSI ve Kalman](docs/olcumler/sekil-konum-hatasi.png)
 
 **Bulgular**
 - İyileşme süresi, arızanın nasıl fark edildiğine bağlıdır. Yalnız HELLO zaman aşımına güvenen ağda HELLO periyodu iyileşmeyi doğrudan belirler; ACK hatası tespiti bunu yaklaşık 5 sn'de tutar ve HELLO periyodunun uzatılmasına izin verir (60 sn'de HELLO'nun yayın payı %0,09).
 - 5 sn'lik HELLO periyodu SF7'de yasal %1 yayın sınırını aşar (%1,03); periyot en az 10 sn seçilmeli.
 - Yeniden deneme, kanal erişimi (CSMA) olmadan neredeyse fayda sağlamaz ve çarpışmaları 3 katına çıkarır; güvenilirlik ve kanal erişimi birlikte tasarlanmalı.
 - RERR bu topolojilerde ölçülebilir ek kazanç sağlamadı (ACK hatası tespiti ve yedek adaylar yetiyor).
+- RSSI tek başına konum için yetersiz: gölgeleme gürültüsü mesafe tahminini çarpan olarak bozar (6 dB'de x1,48) ve hata yüzlerce metreyi bulur.
+- Kalman filtresi, kaynaklardan birinden değil, ikisinin birleşiminden fayda sağlar: kısa sürede ve iyi bir IMU ile yalnız IMU daha iyidir; uzun sürede IMU sapar, RSSI sapmaz ama gürültülüdür, Kalman hatayı sınırda tutar. Filtre ayarı (q) IMU kalitesine uymalıdır.
 
-**Bilinen sınırlar:** bağlantılar simetrik; hassasiyet eşiği SF'den bağımsız; saklı terminal çarpışmaları çözülmedi; sinyal modeli parametreleri varsayım, gerçek donanımda henüz doğrulanmadı.
+**Bilinen sınırlar:** bağlantılar simetrik; hassasiyet eşiği SF'den bağımsız; saklı terminal çarpışmaları çözülmedi; sinyal modeli parametreleri varsayım, gerçek donanımda henüz doğrulanmadı; konum deneyinde IMU gürültüsü ve gölgeleme (zamanla ilişkili) modellenmiş değerlerdir, başlangıç noktası biliniyor kabul edilir.
 
-**Sıradaki:** Adım 09, GPS'siz konum prototipi (RSSI → mesafe, multilateration, IMU ölü hesap, Kalman filtresi); Adım 10, güvenlik prototipi (AES-CCM, replay reddi).
+**Sıradaki:** Adım 10, güvenlik prototipi (AES-CCM, sayaç, replay reddi, klon/sayaç anomali tespiti).
 
 ## Klasörler
 | Klasör | İçerik |
