@@ -24,6 +24,7 @@ class Packet:
     ttl: int
     payload: bytes = b""
     last_hop: int = 0
+    tag: bytes = b""
 
     def size(self) -> int:
         return HEADER_BYTES + len(self.payload) + TAG_BYTES

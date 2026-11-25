@@ -22,7 +22,7 @@ Amaç: protokolü donanımsız tasarlayıp doğrulamak, ilk grafikleri üretmek.
 | 07 | [x] Self-healing | Düğüm arızası, HELLO zaman aşımı, RERR, alternatif rota, **iyileşme süresi** ölçümü | ✅ |
 | 08 | [x] Deney altyapısı | PDR, gecikme, iyileşme süresi; çoklu tekrar, CSV çıktı, Matplotlib grafikleri | ✅ |
 | 09 | [x] GPS'siz konum prototipi | RSSI→mesafe, multilateration, IMU ölü hesap, Kalman filtresi, hata (m) analizi | ✅ |
-| 10 | [ ] Güvenlik prototipi | AES-CCM (Python), nonce/sayaç, replay reddi, klon/sayaç anomali tespiti | ✅ |
+| 10 | [x] Güvenlik prototipi | AES-CCM (Python), nonce/sayaç, replay reddi, klon/sayaç anomali tespiti | ✅ |
 
 **Faz 0 çıktısı:** çalışan simülasyon + iyileşme süresi ve PDR grafikleri (README için).
 

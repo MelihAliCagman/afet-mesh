@@ -16,7 +16,7 @@ Baz istasyonu ve elektrik altyapısı çöktüğünde; STM32 saha/röle düğüm
 
 | Faz | İçerik | Durum |
 |---|---|---|
-| 0 | Python simülasyonu (adım 00-10) | **devam ediyor** (adım 09 tamam) |
+| 0 | Python simülasyonu (adım 00-10) | **tamam** |
 | 1 | Raspberry Pi gateway, sahte radyo (adım 11-16) | bekliyor |
 | 2 | STM32 protokol çekirdeği, UART sahte radyo (adım 17-24) | bekliyor |
 | 3 | Gerçek LoRa (adım 25-28) | bekliyor (modül siparişi gerekli) |
@@ -25,7 +25,7 @@ Baz istasyonu ve elektrik altyapısı çöktüğünde; STM32 saha/röle düğüm
 
 ### Tamamlanan fazlar ve test sonuçları
 
-#### Faz 0: Python simülasyonu (adım 00-09 tamam, 10 sırada)
+#### Faz 0: Python simülasyonu (adım 00-10, tamam)
 Protokol önce donanımsız, bilgisayarda tasarlanıp ölçülüyor. Simülasyon: düğümler 2D düzlemde, log-mesafe yol kaybı modeliyle RSSI, olay tabanlı zaman, gerçek LoRa airtime formülü ve %1 duty cycle sayacı.
 
 | Adım | Modül | Ne yapar |
@@ -40,6 +40,7 @@ Protokol önce donanımsız, bilgisayarda tasarlanıp ölçülüyor. Simülasyon
 | 07 | `sim/routing.py`, `node.py` | Yedek aday tablosu, histerezis, ACK hatası tespiti, RERR, iyileşme süresi |
 | 08 | `sim/experiment.py` | Çok tekrarlı deneyler, CSV ve grafik üretimi |
 | 09 | `sim/localization/` | GPS'siz konum: RSSI'dan mesafe, multilateration, IMU ölü hesap, Kalman filtresi |
+| 10 | `sim/security.py` | AES-128-CCM (4 bayt etiket), sayaçtan nonce, replay reddi, klon/sayaç anomali alarmı |
 
 Çalıştırma (proje kökünden, venv açıkken):
 ```
@@ -47,6 +48,8 @@ python -m sim.node          # yönlendirme, veri, ACK, CSMA ve self-healing dene
 python -m sim.experiment    # 10 tohumlu taramalar, docs/olcumler/ altına CSV ve grafik
 python -m sim.localization.multilat   # RSSI ile konum (çapa sayısı ve gürültü taraması)
 python -m sim.localization.fusion     # IMU + RSSI + Kalman, hata grafiği
+python -m sim.security                # güvenlik senaryoları (sahtecilik, replay, klon)
+python -m pytest sim/tests -q         # güvenlik birim testleri
 ```
 Protokolün ayrıntısı: [docs/protokol.md](docs/protokol.md). Ham ölçümler: [docs/olcumler/](docs/olcumler/).
 
@@ -64,6 +67,9 @@ Protokolün ayrıntısı: [docs/protokol.md](docs/protokol.md). Ham ölçümler:
 | Yük (CSMA ile, 8 düğüm) | Düğüm başına 4 sn'de bir pakette %99,5 teslim; 2 sn'de doyar (%66,5) |
 | Yalnız RSSI ile konum (900 x 900 m, 5 çapa) | Gölgeleme 2 / 4 / 6 / 8 dB iken ortalama hata 88 / 158 / 219 / 266 m |
 | IMU + RSSI + Kalman (sigma 4 dB, 60 dk) | Kalman hatayı sınırda tutar (≈ 50-150 m); yalnız IMU sapmaya bağlı olarak 40-200 m'ye kayar |
+| Güvenlik: sahtecilik | Yükte 1 bit, kaynak adresi veya etiket değişince ya da yanlış anahtarla kare reddedilir; 20000 rastgele etiketin 0'ı kabul edildi |
+| Güvenlik: replay ve sayaç | Aynı kare `dup`, eski kare `replay`; 16 bit sıra numarası taşması (65535 → 0) doğru çözülür; ek bayt maliyeti yok (etiket mevcut 4 bayt) |
+| Güvenlik: yeniden başlatma ve klon | Kalıcı sayaç olmadan yeniden başlayan meşru düğüm klon gibi görünür (alarm); flash'a 64 karede bir yazan kalıcı sayaçla sorunsuz devam eder; geriden başlayan veya çok ileriden (>1024) başlayan klon reddedilir ve alarm verir |
 
 ![İyileşme süresi ve HELLO bedeli](docs/olcumler/sekil-iyilesme-suresi.png)
 
@@ -76,12 +82,13 @@ Protokolün ayrıntısı: [docs/protokol.md](docs/protokol.md). Ham ölçümler:
 - 5 sn'lik HELLO periyodu SF7'de yasal %1 yayın sınırını aşar (%1,03); periyot en az 10 sn seçilmeli.
 - Yeniden deneme, kanal erişimi (CSMA) olmadan neredeyse fayda sağlamaz ve çarpışmaları 3 katına çıkarır; güvenilirlik ve kanal erişimi birlikte tasarlanmalı.
 - RERR bu topolojilerde ölçülebilir ek kazanç sağlamadı (ACK hatası tespiti ve yedek adaylar yetiyor).
+- Sayaç tabanlı güvenlikte kritik nokta yeniden başlatmadır: sayaç kalıcı olmazsa meşru düğüm klon gibi görünür. Kalıcı sayaç (flash'a seyrek rezerv yazımı) hem bunu hem flash aşınmasını çözer. Tam çözülmeyen sınır: anahtarı çalan bir saldırgan sayacı biraz ileri başlatarak meşru düğümü susturabilir.
 - RSSI tek başına konum için yetersiz: gölgeleme gürültüsü mesafe tahminini çarpan olarak bozar (6 dB'de x1,48) ve hata yüzlerce metreyi bulur.
 - Kalman filtresi, kaynaklardan birinden değil, ikisinin birleşiminden fayda sağlar: kısa sürede ve iyi bir IMU ile yalnız IMU daha iyidir; uzun sürede IMU sapar, RSSI sapmaz ama gürültülüdür, Kalman hatayı sınırda tutar. Filtre ayarı (q) IMU kalitesine uymalıdır.
 
-**Bilinen sınırlar:** bağlantılar simetrik; hassasiyet eşiği SF'den bağımsız; saklı terminal çarpışmaları çözülmedi; sinyal modeli parametreleri varsayım, gerçek donanımda henüz doğrulanmadı; konum deneyinde IMU gürültüsü ve gölgeleme (zamanla ilişkili) modellenmiş değerlerdir, başlangıç noktası biliniyor kabul edilir.
+**Bilinen sınırlar:** tek ortak ağ anahtarı, hop alanları (ttl, next_hop) doğrulanmaz ([docs/guvenlik.md](docs/guvenlik.md)); bağlantılar simetrik; hassasiyet eşiği SF'den bağımsız; saklı terminal çarpışmaları çözülmedi; sinyal modeli parametreleri varsayım, gerçek donanımda henüz doğrulanmadı; konum deneyinde IMU gürültüsü ve gölgeleme (zamanla ilişkili) modellenmiş değerlerdir, başlangıç noktası biliniyor kabul edilir.
 
-**Sıradaki:** Adım 10, güvenlik prototipi (AES-CCM, sayaç, replay reddi, klon/sayaç anomali tespiti).
+**Faz 0 tamam.** Sıradaki: Faz 1, Raspberry Pi gateway (sahte radyo ile): paket çözücü ve SQLite, dashboard, fırsatçı internet köprüsü.
 
 ## Klasörler
 | Klasör | İçerik |
