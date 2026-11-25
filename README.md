@@ -18,7 +18,7 @@ Baz istasyonu ve elektrik altyapısı çöktüğünde; STM32 saha/röle düğüm
 |---|---|---|
 | 0 | Python simülasyonu (adım 00-10) | **tamam** |
 | 1 | Raspberry Pi gateway, sahte radyo (adım 11-16) | **tamam**; yazılım Raspberry Pi 4 üzerinde de çalışıyor |
-| 2 | STM32 protokol çekirdeği, UART sahte radyo (adım 17-24) | **C çekirdeği bilgisayarda tamam**; kartlarda doğrulama bekliyor |
+| 2 | STM32 protokol çekirdeği, UART sahte radyo (adım 17-24) | **C çekirdeği tamam ve STM32F407 kartında doğrulandı**; kartlar arası UART bekliyor |
 | 3 | Gerçek LoRa (adım 25-28) | bekliyor (modül siparişi gerekli) |
 | 4 | GPS, TFT, ESP8266, IMU, enerji (adım 29-35) | bekliyor |
 | 5 | Ölçüm, saha testi, rapor (adım 36-38) | bekliyor |
@@ -142,6 +142,7 @@ Protokol, STM32'ye taşınacak donanımdan bağımsız C koduna (`firmware/core/
 
 | Adım | Dosya | Durum |
 |---|---|---|
+| 17 | `firmware/drivers/f407disc/`, `firmware/apps/`, `scripts/` | Kart desteği (başlangıç kodu, bağlayıcı betiği, 168 MHz saat, LED, düğme, SysTick, çevrim sayacı), derleme ve yükleme betikleri, RAM tamponundan log okuma; kartta LED denemesi ve öz-sınama çalışıyor (SWV ve iki kart arası UART bekliyor) |
 | 18 | `node.h` (`afet_radio_if_t`) | Radyo arayüzü hazır; UART sürücüsü kartta yazılacak |
 | 19 | `wire.c` | Tamam: Python ile bayt bayt aynı |
 | 20-21 | `routing.c`, `node.c` | Tamam: HELLO, yönlendirme tablosu, iletme, ACK, yeniden deneme, çift paket bastırma |
@@ -171,6 +172,9 @@ python -m pytest gateway/tests sim/tests firmware/tests -q   # tüm testler (59)
 | C düğümleri, yönlendirme | Zincir ve 3x3 ızgarada Python düğümleriyle aynı yol uzunluğu ve maliyet |
 | C düğümleri, self-healing (3x3 ızgara) | Yalnız HELLO: 13-14 sn (Python 14,5); ACK hatası tespitiyle 3,4-4,5 sn (Python 4,2) |
 | Uçtan uca güvenlik (C) | 4 düğümlü zincirde 10/10 şifreli paket gateway'e ulaştı; tekrar oynatma, sahte etiket ve değiştirilmiş yük reddedildi |
+| **STM32F407 kartında öz-sınama** | C çekirdeği kartta Python vektörleriyle karşılaştırıldı: paket biçimi, AES-CCM (altı vektör), yönlendirme (80 işlem), güvenlik alıcısı (15 olay, klon alarmı) **hepsi geçti** |
+| AES-CCM süresi (168 MHz) | 20 baytlık kareyi mühürlemek 287 us, doğrulayıp çözmek 288 us (AES blok 39 us); röle için tam doğrulama 305 us. SF7'de aynı karenin havada kalma süresi 71,9 ms: şifreleme maliyeti havadaki sürenin %0,4'ü |
+| Yönlendirme güncellemesi (kartta) | HELLO ilanı başına 2 us |
 
 **Bulgular**
 - Güvenli protokolde sıra numarası, çerçeve sayacının alt 16 bitidir; bu yüzden ACK'in hangi paketi onayladığı başlıkta değil yükte taşınır (3 bayt). ACK 13 değil 15 bayt olur, HELLO 16 bayttır.

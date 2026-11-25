@@ -51,7 +51,7 @@ Amaç: protokolü C'ye taşıyıp STM32'de radyosuz (UART ile) çalıştırmak.
 
 | # | Adım | Ne yapılır / çıktı | Donanım |
 |---|------|--------------------|---------|
-| 17 | [ ] CubeIDE/CubeMX projesi | HAL projesi, SWV `printf`, iki kart arası UART kablolaması (TX↔RX çapraz, ortak GND, 3.3 V) | ✅ + 🛒 USB-TTL (3.3 V) önerilir |
+| 17 | [~] CubeIDE/CubeMX projesi | HAL projesi, SWV `printf`, iki kart arası UART kablolaması (TX↔RX çapraz, ortak GND, 3.3 V) | ✅ + 🛒 USB-TTL (3.3 V) önerilir |
 | 18 | [~] Radyo soyutlaması | `radio_if.h` arayüzü + UART sahte radyo sürücüsü | ✅ |
 | 19 | [x] Paket serileştirme | Pakete çevirme/ayrıştırma, CRC; bilgisayarda birim test | ✅ |
 | 20 | [x] HELLO ve komşu tablosu (C) | Simülasyondaki mantığın C karşılığı | ✅ |
