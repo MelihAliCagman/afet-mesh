@@ -20,7 +20,7 @@ Amaç: protokolü donanımsız tasarlayıp doğrulamak, ilk grafikleri üretmek.
 | 05 | [x] Veri iletimi | DATA paketi, TTL, çift paket bastırma, hop-hop ACK, sınırlı yeniden deneme | ✅ |
 | 06 | [x] Kanal erişimi | Çarpışma modeli, dinle-sonra-konuş, rastgele backoff | ✅ |
 | 07 | [x] Self-healing | Düğüm arızası, HELLO zaman aşımı, RERR, alternatif rota, **iyileşme süresi** ölçümü | ✅ |
-| 08 | [ ] Deney altyapısı | PDR, gecikme, iyileşme süresi; çoklu tekrar, CSV çıktı, Matplotlib grafikleri | ✅ |
+| 08 | [x] Deney altyapısı | PDR, gecikme, iyileşme süresi; çoklu tekrar, CSV çıktı, Matplotlib grafikleri | ✅ |
 | 09 | [ ] GPS'siz konum prototipi | RSSI→mesafe, multilateration, IMU ölü hesap, Kalman filtresi, hata (m) analizi | ✅ |
 | 10 | [ ] Güvenlik prototipi | AES-CCM (Python), nonce/sayaç, replay reddi, klon/sayaç anomali tespiti | ✅ |
 

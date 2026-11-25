@@ -16,7 +16,7 @@ Baz istasyonu ve elektrik altyapısı çöktüğünde; STM32 saha/röle düğüm
 
 | Faz | İçerik | Durum |
 |---|---|---|
-| 0 | Python simülasyonu (adım 00-10) | **devam ediyor** (adım 07 tamam) |
+| 0 | Python simülasyonu (adım 00-10) | **devam ediyor** (adım 08 tamam) |
 | 1 | Raspberry Pi gateway, sahte radyo (adım 11-16) | bekliyor |
 | 2 | STM32 protokol çekirdeği, UART sahte radyo (adım 17-24) | bekliyor |
 | 3 | Gerçek LoRa (adım 25-28) | bekliyor (modül siparişi gerekli) |
@@ -133,7 +133,33 @@ Not (Adım 07 sonrası): Aynı deney yeni yönlendirmeyle tekrarlandı: çarpı�
 
 Bulgular: (1) Aday tablosu ve histerezis yol kararsızlığını giderdi; Adım 04'te ertelenen sorun kapandı. (2) ACK hatası tespiti, iyileşme süresini 3-4 kat kısaltır (14,5 → 4,2 sn): arızayı HELLO zaman aşımını (15 sn) beklemeden 3 yeniden denemede (~3-4 sn) fark eder. (3) RERR bu iki topolojide ölçülebilir fayda sağlamadı: komşular poison reverse ve yedek adaylar sayesinde zaten bir HELLO içinde yeni yola geçiyor. RERR yalnızca yedeği olmayan düğümler için güvenlik ağı olarak kodda durur; "gerekli" demek yerine "denendi, bu topolojilerde ek kazanç yok" denecek. (4) İyileşme süresi HELLO periyodu, zaman aşımı ve yeniden deneme sayısına bağlıdır; bunların sistematik taraması Adım 08'de (deney altyapısı) yapılacak. (5) HELLO artık 16 bayt (başlık 8 + yük 4 + etiket 4): SF7'de 51,5 ms; 5 sn periyotla %1,03, yani yasal %1 sınırının hafifçe üstünde. HELLO periyodu SF7'de en az ~5,2 sn olmalı (pratikte 30-60 sn).
 
-**Sıradaki:** Adım 08, deney altyapısı (PDR, gecikme, iyileşme süresi; çoklu tekrar, CSV, Matplotlib grafikleri).
+**Adım 08: Deney altyapısı** (`sim/experiment.py`). Tek bir deney fonksiyonu senaryoyu kurar, trafiği ve arızayı zamanlar, ölçümleri toplar. Her ayar 10 farklı tohumla tekrarlanır, ortalama ± standart sapma raporlanır. Sonuçlar CSV'ye (`docs/olcumler/`) yazılır ve Matplotlib ile grafiğe çevrilir. Ölçülenler: iyileşme süresi (arızadan sonra ilk paketin gateway'e ulaşma süresi), arıza sonrası PDR, ortalama ve p95 gecikme, çarpışma ve yeniden gönderim sayıları.
+
+Çalıştırma: `python -m sim.experiment` (yaklaşık 45 sn; `python -m sim.experiment hizli` 3 tohumla ~15 sn)
+
+![İyileşme süresi ve HELLO bedeli](docs/olcumler/sekil-iyilesme-suresi.png)
+
+![Yük, PDR ve gecikme](docs/olcumler/sekil-yuk-pdr.png)
+
+| J: HELLO periyodu (zaman aşımı = 3x) | Yalnız HELLO zaman aşımı | + ACK hatası tespiti | HELLO'nun yayın payı |
+|---|---|---|---|
+| 5 sn | 14,5 ± 1,8 sn (PDR %83,6) | 4,2 ± 2,0 sn (%96,9) | %1,03 |
+| 10 sn | 27,9 ± 3,5 sn (%67,7) | 5,1 ± 0,6 sn (%95,9) | %0,51 |
+| 20 sn | 53,1 ± 7,7 sn (%57,2) | 5,2 ± 0,1 sn (%97,8) | %0,26 |
+| 30 sn | 88,2 ± 8,4 sn (%43,3) | 5,2 ± 0,4 sn (%98,7) | %0,17 |
+| 60 sn | 169,1 ± 19,2 sn (%30,7) | 5,3 ± 0,1 sn (%97,7) | %0,09 |
+
+| K: düğüm başına paket aralığı (8 düğüm) | CSMA yok: PDR / gecikme | CSMA var: PDR / gecikme |
+|---|---|---|
+| 2 sn | %16,6 / 0,68 sn | %66,5 / 1,15 sn |
+| 4 sn | %25,8 / 1,12 sn | %99,5 / 0,29 sn |
+| 8 sn | %46,4 / 1,81 sn | %99,5 / 0,20 sn |
+| 16 sn | %62,1 / 1,20 sn | %100 / 0,16 sn |
+| 32 sn | %63,8 / 0,87 sn | %99,8 / 0,16 sn |
+
+Bulgular: (1) Yalnız HELLO zaman aşımına güvenen ağda iyileşme süresi zaman aşımına (3 x HELLO periyodu) neredeyse eşittir ve doğrusal büyür; HELLO periyodu iyileşme süresini doğrudan belirler. (2) ACK hatası tespiti iyileşmeyi periyottan bağımsız yaklaşık 5 sn'de tutar. Böylece HELLO periyodu 60 sn'ye çıkarılabilir (yayın payı %0,09) ve trafiği olan düğümler yine de 5 sn'de iyileşir. Sınır: ACK tespiti yalnızca trafik varken çalışır; sessiz düğüm arızayı ancak zaman aşımıyla öğrenir. (3) 5 sn'lik HELLO periyodu SF7'de yasal %1 sınırını aşar (%1,03); en az 10 sn seçilmeli. (4) CSMA ile ağ düğüm başına 4 sn'de bir paketi (toplam 2 paket/sn) %99,5 teslim eder; 2 sn'de doyar (%66,5). (5) CSMA yokken PDR yük azalınca da yalnızca %64'e çıkar: sorun yalnızca yük değil. Hipotez (test edilmedi): düğümlerin bir paketi alıp aynı anda ACK ve aktarma yapması komşuları senkronlar ve çarpıştırır. (6) CSMA ile gecikme 0,15-0,3 sn, p95 yaklaşık 0,5-1,1 sn.
+
+**Sıradaki:** Adım 09, GPS'siz konum prototipi (RSSI → mesafe, multilateration, IMU ölü hesap, Kalman filtresi).
 
 ## Klasörler
 | Klasör | İçerik |
