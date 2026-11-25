@@ -9,6 +9,23 @@ Bilgisayar **Windows** kalabilir; Pi kendi işletim sistemiyle (Raspberry Pi OS)
 - Bilgisayarda microSD okuyucu (yoksa USB microSD okuyucu)
 - İsteğe bağlı: HDMI kablo + USB klavye (sorun gidermek için)
 
+## 0.1 Türkçe karakter ve yol uyarıları (baştan önlem)
+- Windows kullanıcı klasörünüz Türkçe karakter içeriyorsa (ör. `C:\Users\...Çağman`), bazı araçlar sorun çıkarabilir. Çalışma ve yedek dosyalarını **yalnızca ASCII** yollarda tutun: proje `C:\afet-mesh`, kart yedeği `C:\afet-yedek`.
+- Pi kullanıcı adı, ana makine adı, **parola**, Wi-Fi adı ve Wi-Fi parolasında Türkçe karakter (ç, ğ, ı, ö, ş, ü) ve AltGr gerektiren semboller (@, {, [, \ gibi) kullanmayın. Harf, rakam ve `-` yeterli; parola en az 12 karakter olsun.
+- SSH, kullanıcı klasörüne `known_hosts` yazamazsa `ssh -o UserKnownHostsFile=C:\afet-yedek\known_hosts pi@afet-gw.local` kullanın.
+
+## 0.2 Ağ seçenekleri (Pi'nin internete ihtiyacı var: güncelleme, git, pip)
+Üç yol var; hangisi kolaysa onu seçin.
+1. **Modem/router'a Ethernet:** en kolayı, ama modemin yanına gitmek gerekir.
+2. **Telefon hotspot'u (kablosuz):** telefondan hotspot açın, 2,4 GHz ve WPA2 seçin, adı ve parolası ASCII olsun. Aynı Wi-Fi bilgisini Imager'a girin; bilgisayar da aynı hotspot'a bağlansın. Mobil veri kullanır (güncellemeler yüzlerce MB olabilir).
+3. **Bilgisayardan internet paylaşımı (ICS), Pi'ye Ethernet:** bilgisayarda Ethernet (RJ45) portu gerekir (yoksa USB-Ethernet adaptörü). Windows'ta: Ayarlar > Ağ ve İnternet > Gelişmiş ağ ayarları > Diğer ağ bağdaştırıcısı seçenekleri > Wi-Fi'ye sağ tık > Özellikler > Paylaşım > "Diğer ağ kullanıcılarının bu bilgisayarın internet bağlantısı üzerinden bağlanmasına izin ver" ve ev ağı olarak **Ethernet**'i seçin. Pi'ye Ethernet takılınca 192.168.137.x adresi alır. Hata verirse: "Internet Connection Sharing" ve "Windows Defender Güvenlik Duvarı" hizmetlerinin çalıştığını kontrol edin; VPN açıksa kapatın; seçenek gri ise bağdaştırıcıyı devre dışı bırakıp yeniden etkinleştirin. `afet-gw.local` bulunamazsa `arp -a` ile 192.168.137.x adresini bulun.
+
+## 0.3 Kartı yedekleme (silmeden önce)
+1. Kartı okuyucuya takın. Windows "diski biçimlendirmeniz gerekiyor" derse **İptal'e basın, asla biçimlendirmeyin.**
+2. Yalnızca küçük bir `bootfs` sürücüsü görünür (içeriğin çoğu Windows'un okuyamadığı ext4 bölümünde).
+3. Tüm kartın kopyası için **Win32 Disk Imager** (sourceforge.net/projects/win32diskimager) kullanın: yönetici olarak çalıştırın, dosya olarak `C:\afet-yedek\sd-yedek.img` yazın, cihaz olarak kartın sürücü harfini seçin, **Read** (Oku) düğmesine basın. **Write'a basmayın** (yazmak kartı silerdi).
+4. `C:\afet-yedek` diskinde kart boyutu kadar boş yer olmalı (16 GB). Bitince PowerShell'de `Get-FileHash C:\afet-yedek\sd-yedek.img` ile özeti kaydedin ve dosyayı ikinci bir yere (harici disk veya bulut) kopyalayın.
+
 ## 1. İşletim sistemini karta yazma (Windows)
 1. **Raspberry Pi Imager**'ı indirip kurun (raspberrypi.com/software).
 2. microSD'yi okuyucuya takın. **Kartın içindeki her şey silinecek.**
