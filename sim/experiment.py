@@ -10,7 +10,9 @@ from sim.mesh_sim import Node
 from sim.node import MeshNode, route_path
 from sim.radio import Radio
 
-OUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "docs", "olcumler")
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.path.join(ROOT, "docs", "olcumler", "veri")
+PLOT_DIR = os.path.join(ROOT, "docs", "olcumler", "grafikler")
 GRID = [(x * 500.0, y * 500.0) for y in range(3) for x in range(3)]
 HELLO_BYTES = 16
 
@@ -81,8 +83,8 @@ def run_load(seed, interval, csma, count=10, positions=GRID):
 
 
 def write_csv(name, rows):
-    os.makedirs(OUT_DIR, exist_ok=True)
-    path = os.path.join(OUT_DIR, name)
+    os.makedirs(DATA_DIR, exist_ok=True)
+    path = os.path.join(DATA_DIR, name)
     with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
         w.writeheader()
@@ -172,7 +174,8 @@ def plots(rec_rows, load_rows):
     style(a2, "HELLO periyodu (sn)", "HELLO'nun yayın süresi payı (%)", "HELLO'nun bedeli (SF7, 16 bayt)")
     a2.set_ylim(bottom=0)
     fig.tight_layout()
-    fig.savefig(os.path.join(OUT_DIR, "sekil-iyilesme-suresi.png"), dpi=160)
+    os.makedirs(PLOT_DIR, exist_ok=True)
+    fig.savefig(os.path.join(PLOT_DIR, "sekil-iyilesme-suresi.png"), dpi=160)
     plt.close(fig)
 
     # Şekil 2: yük, PDR ve gecikme
@@ -190,7 +193,7 @@ def plots(rec_rows, load_rows):
     style(a2, "düğüm başına paket aralığı (sn)", "ortalama gecikme (sn)", "Gecikme")
     a2.set_ylim(bottom=0)
     fig.tight_layout()
-    fig.savefig(os.path.join(OUT_DIR, "sekil-yuk-pdr.png"), dpi=160)
+    fig.savefig(os.path.join(PLOT_DIR, "sekil-yuk-pdr.png"), dpi=160)
     plt.close(fig)
 
 
@@ -221,4 +224,4 @@ if __name__ == "__main__":
     print(write_csv("yuk_pdr.csv", [{k: ("" if v is None else v) for k, v in r.items()} for r in load_rows]))
     print_tables(rec_rows, load_rows)
     plots(rec_rows, load_rows)
-    print("grafikler:", os.path.join(OUT_DIR, "sekil-iyilesme-suresi.png"), "ve", os.path.join(OUT_DIR, "sekil-yuk-pdr.png"))
+    print("grafikler:", os.path.join(PLOT_DIR, "sekil-iyilesme-suresi.png"), "ve", os.path.join(PLOT_DIR, "sekil-yuk-pdr.png"))

@@ -11,7 +11,7 @@ SIDE = 900.0
 SPEED = 1.4
 WAYPOINTS = [(150.0, 150.0), (750.0, 150.0), (750.0, 750.0), (150.0, 750.0), (150.0, 150.0)]
 PERIMETER = 2400.0
-OUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "docs", "olcumler")
+OUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "docs", "olcumler", "grafikler")
 
 
 def truth_at(t):
@@ -151,6 +151,7 @@ def plots(sigma=4):
     a2.set_title("Kalman hatayı sınırda tutar, IMU kayar (60 dk)", color=INK, fontsize=10.5, loc="left")
     a2.set_ylim(bottom=0)
     fig.tight_layout()
+    os.makedirs(OUT_DIR, exist_ok=True)
     path = os.path.join(OUT_DIR, "sekil-konum-hatasi.png")
     fig.savefig(path, dpi=160, bbox_inches="tight")
     plt.close(fig)

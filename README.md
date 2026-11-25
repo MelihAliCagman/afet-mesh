@@ -45,13 +45,13 @@ Protokol önce donanımsız, bilgisayarda tasarlanıp ölçülüyor. Simülasyon
 Çalıştırma (proje kökünden, venv açıkken):
 ```
 python -m sim.node          # yönlendirme, veri, ACK, CSMA ve self-healing deneyleri
-python -m sim.experiment    # 10 tohumlu taramalar, docs/olcumler/ altına CSV ve grafik
+python -m sim.experiment    # 10 tohumlu taramalar, docs/olcumler/ altına CSV (veri/) ve grafik (grafikler/)
 python -m sim.localization.multilat   # RSSI ile konum (çapa sayısı ve gürültü taraması)
 python -m sim.localization.fusion     # IMU + RSSI + Kalman, hata grafiği
 python -m sim.security                # güvenlik senaryoları (sahtecilik, replay, klon)
 python -m pytest sim/tests -q         # güvenlik birim testleri
 ```
-Protokolün ayrıntısı: [docs/protokol.md](docs/protokol.md). Ham ölçümler: [docs/olcumler/](docs/olcumler/).
+Protokolün ayrıntısı: [docs/protokol.md](docs/protokol.md). Ham ölçümler: [docs/olcumler/veri/](docs/olcumler/veri/), grafikler: [docs/olcumler/grafikler/](docs/olcumler/grafikler/).
 
 **Ana sonuçlar**
 
@@ -71,11 +71,11 @@ Protokolün ayrıntısı: [docs/protokol.md](docs/protokol.md). Ham ölçümler:
 | Güvenlik: replay ve sayaç | Aynı kare `dup`, eski kare `replay`; 16 bit sıra numarası taşması (65535 → 0) doğru çözülür; ek bayt maliyeti yok (etiket mevcut 4 bayt) |
 | Güvenlik: yeniden başlatma ve klon | Kalıcı sayaç olmadan yeniden başlayan meşru düğüm klon gibi görünür (alarm); flash'a 64 karede bir yazan kalıcı sayaçla sorunsuz devam eder; geriden başlayan veya çok ileriden (>1024) başlayan klon reddedilir ve alarm verir |
 
-![İyileşme süresi ve HELLO bedeli](docs/olcumler/sekil-iyilesme-suresi.png)
+![İyileşme süresi ve HELLO bedeli](docs/olcumler/grafikler/sekil-iyilesme-suresi.png)
 
-![Yük, PDR ve gecikme](docs/olcumler/sekil-yuk-pdr.png)
+![Yük, PDR ve gecikme](docs/olcumler/grafikler/sekil-yuk-pdr.png)
 
-![Konum hatası: IMU, RSSI ve Kalman](docs/olcumler/sekil-konum-hatasi.png)
+![Konum hatası: IMU, RSSI ve Kalman](docs/olcumler/grafikler/sekil-konum-hatasi.png)
 
 **Bulgular**
 - İyileşme süresi, arızanın nasıl fark edildiğine bağlıdır. Yalnız HELLO zaman aşımına güvenen ağda HELLO periyodu iyileşmeyi doğrudan belirler; ACK hatası tespiti bunu yaklaşık 5 sn'de tutar ve HELLO periyodunun uzatılmasına izin verir (60 sn'de HELLO'nun yayın payı %0,09).
@@ -91,11 +91,11 @@ Protokolün ayrıntısı: [docs/protokol.md](docs/protokol.md). Ham ölçümler:
 **Faz 0 tamam.**
 
 #### Faz 1: Gateway yazılımı, sahte radyo ile (adım 12-16 tamam, 11 Pi gelince)
-Gateway'in yazılımı gerçek radyo ve Raspberry Pi olmadan, bilgisayarda geliştirildi. Simülasyondaki ağ, "sahte radyo" ile gateway'e gerçek bir LoRa radyosu gibi bağlanıyor: havadan gelen her paket güvenli bayt dizisine çevrilip alıcı servise veriliyor. Pi geldiğinde aynı kod olduğu gibi çalışacak ([docs/pi-kurulum.md](docs/pi-kurulum.md)).
+Gateway'in yazılımı gerçek radyo ve Raspberry Pi olmadan, bilgisayarda geliştirildi. Simülasyondaki ağ, "sahte radyo" ile gateway'e gerçek bir LoRa radyosu gibi bağlanıyor: havadan gelen her paket güvenli bayt dizisine çevrilip alıcı servise veriliyor. Pi geldiğinde aynı kod olduğu gibi çalışacak ([docs/kurulum/pi-kurulum.md](docs/kurulum/pi-kurulum.md)).
 
 | Adım | Modül | Ne yapar |
 |---|---|---|
-| 11 | `docs/pi-kurulum.md`, `gateway/deploy/` | Pi kurulum adımları ve systemd hizmet dosyaları (Pi gelince uygulanacak) |
+| 11 | `docs/kurulum/pi-kurulum.md`, `gateway/deploy/` | Pi kurulum adımları ve systemd hizmet dosyaları (Pi gelince uygulanacak) |
 | 12 | `gateway/receiver/`, `sim/wire.py` | Paket çözücü, doğrulama (AES-CCM), uygulama yükü, SQLite şeması, ACK üretimi |
 | 13 | `gateway/mockradio.py` | Sahte radyo: simülasyonu gateway'e besler, saldırı ve arıza enjekte eder |
 | 14 | `gateway/dashboard/app.py` | FastAPI sunucusu: düğüm, mesaj, alarm, sağlık özeti, canlı akış (SSE) |
@@ -110,7 +110,7 @@ python -m gateway.bridge.demo                     # internet kes/aç ve köprü 
 python -m pytest gateway/tests sim/tests -q       # 38 birim test
 ```
 
-![Gateway paneli](docs/olcumler/panel-ekran.png)
+![Gateway paneli](docs/olcumler/grafikler/panel-ekran.png)
 
 **Ana sonuçlar**
 
@@ -186,8 +186,8 @@ python -m pytest gateway/tests sim/tests firmware/tests -q   # tüm testler (59)
 | `firmware/` | STM32 kodu; donanımdan bağımsız protokol çekirdeği |
 | `gateway/` | Raspberry Pi: alıcı, dashboard, köprü |
 | `remote-server/` | Uzak sunucu demosu |
-| `hardware/` | Şemalar, malzeme listesi |
-| `docs/` | Protokol, güvenlik, ölçümler, proje raporu |
+| `hardware/` | Malzeme listesi ([PDF](hardware/malzeme-listesi.pdf)), şemalar |
+| `docs/` | Protokol, güvenlik, yol haritası, kurulum, ölçümler, proje raporu (dizin: [docs/README.md](docs/README.md)) |
 | `scripts/` | Yardımcı betikler |
 
 ## Kurulum (simülasyon)
