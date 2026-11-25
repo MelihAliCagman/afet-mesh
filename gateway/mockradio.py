@@ -1,5 +1,6 @@
 import os
 import random
+import threading
 import time
 from dataclasses import replace
 
@@ -18,6 +19,7 @@ class MockRadio:
     def __init__(self, db, key=None, positions=GRID, seed=0, report_period=20.0, sos_prob=0.03,
                  loss=0.0, hello_period=5.0, timeout=15.0):
         self.key = key or os.urandom(16)
+        self.lock = threading.RLock()
         self.sim, self.mesh = build(positions, seed, hello_period=hello_period, timeout=timeout, loss=loss)
         self.gw_node = self.mesh[0]
         self.rng = random.Random(seed + 1000)
@@ -80,16 +82,28 @@ class MockRadio:
 
     # ---- saldırı denemeleri ----
     def inject_replay(self, count=1):
+        with self.lock:
+            self._inject_replay(count)
+
+    def _inject_replay(self, count):
         data = [f for f in self.sent_frames if f[3] == PacketType.DATA.value]
         for _ in range(count):
             self.feed(self.rng.choice(data[: max(1, len(data) // 2)]))
 
     def inject_forgery(self, src, count=1):
+        with self.lock:
+            self._inject_forgery(src, count)
+
+    def _inject_forgery(self, src, count):
         fake = Sender(src, os.urandom(16))
         for _ in range(count):
             self.feed(encode(fake.seal(1, 1, PacketType.DATA, encode_report(KIND_SOS, 0, 0, 50, 9, "sahte"))))
 
     def inject_clone(self, src, count=4):
+        with self.lock:
+            self._inject_clone(src, count)
+
+    def _inject_clone(self, src, count):
         clone = Sender(src, self.key, PersistentCounter({}, block=64))
         for _ in range(count):
             self.sim.run(until=self.sim.now + 1.0)
@@ -102,11 +116,13 @@ class MockRadio:
             self.sim.run(until=end)
             return
         while self.sim.now < end:
-            self.sim.run(until=self.sim.now + 1.0 * speed)
+            with self.lock:
+                self.sim.run(until=self.sim.now + 1.0 * speed)
             time.sleep(1.0)
 
     def kill_node(self, node_id):
-        next(m for m in self.mesh if m.node.node_id == node_id).kill()
+        with self.lock:
+            next(m for m in self.mesh if m.node.node_id == node_id).kill()
 
 
 if __name__ == "__main__":
