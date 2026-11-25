@@ -175,6 +175,8 @@ python -m pytest gateway/tests sim/tests firmware/tests -q   # tüm testler (59)
 | **STM32F407 kartında öz-sınama** | C çekirdeği kartta Python vektörleriyle karşılaştırıldı: paket biçimi, AES-CCM (altı vektör), yönlendirme (80 işlem), güvenlik alıcısı (15 olay, klon alarmı) **hepsi geçti** |
 | AES-CCM süresi (168 MHz) | 20 baytlık kareyi mühürlemek 287 us, doğrulayıp çözmek 288 us (AES blok 39 us); röle için tam doğrulama 305 us. SF7'de aynı karenin havada kalma süresi 71,9 ms: şifreleme maliyeti havadaki sürenin %0,4'ü |
 | Yönlendirme güncellemesi (kartta) | HELLO ilanı başına 2 us |
+| **6 düğümlü ağ tek kartta** (yazılım radyosu, elmas topoloji, 200 sn sanal zaman) | Yol 11 sn'de öğrenildi; arızadan önce 25/25, düğüm 3 (yoldaki düğüm) kapatılınca iyileşme **4,1 sn**, arızadan sonra 14/15 teslim; son yol 6 > 2 > 1. Python'daki C düğümleriyle (3,4-4,5 sn) uyumlu. Tüm ağı 200 sn'lik sanal sürede koşmak işlemcide 337 ms sürdü (gerçek zamandan 590 kat hızlı) |
+| Gerçek zamanlı kart demosu | Kartta 6 düğümlü ağ gerçek zamanda çalışır: yeşil LED her gateway teslimatında, turuncu yeniden gönderimde, mavi yol değişince yanar; USER düğmesi yoldaki düğümü kapatır/açar (kırmızı LED), sayaçlar korunarak |
 
 **Bulgular**
 - Güvenli protokolde sıra numarası, çerçeve sayacının alt 16 bitidir; bu yüzden ACK'in hangi paketi onayladığı başlıkta değil yükte taşınır (3 bayt). ACK 13 değil 15 bayt olur, HELLO 16 bayttır.

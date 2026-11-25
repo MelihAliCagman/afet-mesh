@@ -71,8 +71,9 @@ def read_log(app, size=2048, end_marker="<BITTI>"):
     yapılır. Bitiş işareti görünmezse bekletme büyütülerek yeniden denenir."""
     sym = symbols(app)
     text = ""
-    for delay_bytes in (8192, 16384, 24576, 32768):
-        code, out = cli("-c", "port=SWD", "-r8", "0x08000000", str(delay_bytes),
+    for repeats in (1, 3, 6, 12):
+        delay = ["-r8", "0x08000000", "32768"] * repeats
+        code, out = cli("-c", "port=SWD", *delay,
                         "-r8", hex(sym["log_head"]), "4", "-r8", hex(sym["log_buf"]), str(size))
         mem = parse_mem(out)
         try:

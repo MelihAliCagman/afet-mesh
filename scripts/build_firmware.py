@@ -23,9 +23,10 @@ def find_toolchain():
 
 def main():
     if len(sys.argv) < 2:
-        sys.exit("kullanım: python scripts/build_firmware.py <uygulama> [--core]")
+        sys.exit("kullanım: python scripts/build_firmware.py <uygulama> [--core] [-DAD=değer ...]")
     app = sys.argv[1]
     use_core = "--core" in sys.argv
+    defines = [a for a in sys.argv[2:] if a.startswith("-D")]
     app_dir = os.path.join(ROOT, "firmware", "apps", app)
     sources = sorted(glob.glob(os.path.join(BOARD, "*.c"))) + sorted(glob.glob(os.path.join(app_dir, "*.c")))
     includes = [BOARD, app_dir]
@@ -39,7 +40,7 @@ def main():
     os.makedirs(BUILD, exist_ok=True)
     elf = os.path.join(BUILD, app + ".elf")
     cmd = [os.path.join(tools, "arm-none-eabi-gcc.exe"), *CPU, "-Os", "-g", "-std=gnu11", "-Wall", "-Wextra", "-Werror",
-           "-ffunction-sections", "-fdata-sections", *[f"-I{i}" for i in includes], "-T", os.path.join(BOARD, "link.ld"),
+           "-ffunction-sections", "-fdata-sections", *defines, *[f"-I{i}" for i in includes], "-T", os.path.join(BOARD, "link.ld"),
            "-Wl,--gc-sections", f"-Wl,-Map={os.path.join(BUILD, app + '.map')}", "--specs=nano.specs", "--specs=nosys.specs",
            "-nostartfiles", "-o", elf, *sources, "-lm"]
     r = subprocess.run(cmd, capture_output=True, text=True, env=env)
