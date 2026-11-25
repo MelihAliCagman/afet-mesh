@@ -82,7 +82,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now afet-dashboard
 systemctl status afet-dashboard
 ```
-Panel: bilgisayardan `http://afet-gw.local:8000`. (Köprü hizmeti `afet-bridge`, `.env` içinde uzak sunucu adresi ve API anahtarı tanımlanınca etkinleştirilir.)
+Panel yalnızca Pi'nin kendi içinde (`127.0.0.1`) dinler, ağa açık değildir (panelde kimlik doğrulama yok). Bilgisayardan açmak için SSH tüneli kullanın: bilgisayarda `ssh -L 8000:127.0.0.1:8000 pi@<Pi adresi>` ile bağlanıp tarayıcıda `http://127.0.0.1:8000` adresini açın. (Köprü hizmeti `afet-bridge`, `.env` içinde uzak sunucu adresi ve API anahtarı tanımlanınca etkinleştirilir.)
 
 ## 7. Kontrol listesi
 - [ ] Pi açılıyor, `ssh` ile bağlanılıyor
