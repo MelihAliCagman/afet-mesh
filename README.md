@@ -16,7 +16,7 @@ Baz istasyonu ve elektrik altyapısı çöktüğünde; STM32 saha/röle düğüm
 
 | Faz | İçerik | Durum |
 |---|---|---|
-| 0 | Python simülasyonu (adım 00-10) | **devam ediyor** (adım 06 tamam) |
+| 0 | Python simülasyonu (adım 00-10) | **devam ediyor** (adım 07 tamam) |
 | 1 | Raspberry Pi gateway, sahte radyo (adım 11-16) | bekliyor |
 | 2 | STM32 protokol çekirdeği, UART sahte radyo (adım 17-24) | bekliyor |
 | 3 | Gerçek LoRa (adım 25-28) | bekliyor (modül siparişi gerekli) |
@@ -100,6 +100,8 @@ Bulgular: (1) Gateway bilgisi zincirde her HELLO periyodunda bir hop yürür; u�
 
 Bulgular: (1) Hop-hop ACK, 3 hop'lu zincirde %40 paket kaybında bile teslim oranını %29,5'ten %91,5'e çıkarır; kayıp hop sayısıyla çarpıldığı için uçtan uca ACK yerine hop-hop ACK seçildi. (2) Bedeli kanal yüküdür: kayıp arttıkça yeniden gönderim ve çift paket artar, bu da airtime ve duty cycle tüketir. (3) ACK kaybolduğunda gönderen paketi tekrar yollar; alıcı çifti bastırır ama yine de ACK yollar, yoksa gönderen vazgeçene kadar tekrar eder. (4) Kayıp modeli bağımsız ve simetriktir; çarpışma ve asimetrik bağlantılar sonraki adımlarda eklenecek.
 
+Not (Adım 07 sonrası): Bu tablo eski yönlendirmeyle (yol hiç zaman aşımına uğramıyordu) ölçüldü. Adım 07'deki yönlendirmeyle yeniden ölçüm: kayıpsız %100; %20 kayıpta yeniden denemesiz %43,0, 3 denemeyle %94,0 (320 yeniden gönderim, 155 çift bastırıldı); %40 kayıpta yeniden denemesiz %12,5, 3 denemeyle %72,0 (536 yeniden gönderim, 180 çift). Eski sayılar iyimserdi çünkü ardışık HELLO kayıpları yolu düşürmüyordu; sonuç yönü değişmedi: hop-hop ACK büyük fark yaratır.
+
 **Adım 06: Kanal erişimi** (`sim/radio.py`, `sim/node.py`). Radyoya çarpışma modeli eklendi: aynı alıcıda zamanca üst üste binen iki alım birlikte bozulur; konuşan düğüm aynı anda dinleyemez (yarı çift yönlü). Düğümler CSMA uygular: göndermeden önce kanalı dinler, doluysa rastgele süre bekler; bekleme penceresi her denemede ikiye katlanır (üstel backoff, en fazla 6 deneme, sonra yine de gönderir). Çarpışma modeli varsayılan kapalıdır, böylece önceki adımların sonuçları aynı kalır.
 
 | Test | Sonuç |
@@ -113,7 +115,25 @@ Bulgular: (1) Hop-hop ACK, 3 hop'lu zincirde %40 paket kaybında bile teslim ora
 
 Bulgular: (1) Çarpışma modeli açılınca PDR %100'den %41,6'ya düşer; önceki adımların sonuçları iyimserdi. (2) CSMA tek başına PDR'yi %92'ye, CSMA ve ACK birlikte %98,6'ya çıkarır. (3) CSMA olmadan yeniden deneme durumu kötüleştirir (%41,6 → %35,5): çarpışan paketlerin tekrarı kanalı doldurur ve çarpışmalar 4968'den 19259'a çıkar; yani güvenilirlik katmanı kanal erişimiyle birlikte tasarlanmalıdır. (4) CSMA saklı terminal sorununu çözmez (birbirini duymayan iki düğüm yine çarpışır); kalan çarpışmalar buradan ve aynı backoff değerinin seçilmesinden gelir.
 
-**Sıradaki:** Adım 07, self-healing (düğüm arızası, HELLO zaman aşımı, RERR, alternatif rota, iyileşme süresi).
+Not (Adım 07 sonrası): Aynı deney yeni yönlendirmeyle tekrarlandı: çarpışma yok %100; çarpışma var, CSMA yok, deneme 0: %21,7; deneme 3: %25,6; CSMA var, deneme 0: %92,7; deneme 3: %99,4 (1485 çarpışan alım, 157 yeniden gönderim). Sıralama ve çıkarımlar aynı.
+
+**Adım 07: Self-healing (kendini onarma)** (`sim/routing.py`, `sim/node.py`). Yönlendirme tablosu yeniden yazıldı: düğüm artık yalnızca en iyi yolu değil, her komşunun son ilanını aday olarak tutar ve 15 sn (3 HELLO periyodu) ses vermeyen adayı siler. Yoldan ancak kesin olarak daha ucuz bir aday çıkarsa vazgeçilir (histerezis). HELLO yüküne "benim sonraki hop'um kim" baytı eklendi (yük 3 → 4 bayt); yolunu bizim üzerimizden geçiren komşu aday sayılmaz (poison reverse), böylece yeni döngü oluşmaz. Arıza üç yoldan fark edilir: (1) komşunun HELLO'su kesilir (zaman aşımı), (2) DATA'nın ACK'i 3 yeniden denemede gelmez (komşu ölü sayılır), (3) komşu RERR yayınlar (yolum kalmadı). Yol kaybolunca düğüm RERR yayınlar. Deneyler için `kill()` ile düğüm arızası simüle edilir.
+
+Çalıştırma: `python -m sim.routing` (karar kuralları), `python -m sim.node` (deneyler, `== H` ve `== I`)
+
+| Test | Sonuç |
+|---|---|
+| Yol kararsızlığı (Adım 04'teki 400 m zincir ve 3x3 ızgara) | Hop değişimi 23 ve 31'den 1'e düştü; döngü taraması 96 yolda yine temiz |
+| H: 3x3 ızgara, düğüm 9 yolundaki gateway'e komşu düğüm ölür (arıza kaynağa yakın), yalnız HELLO zaman aşımı | İyileşme ort. 14,5 sn (en kötü 17,5), arıza sonrası PDR %79,5 |
+| H, + ACK hatası tespiti | İyileşme ort. 4,2 sn (en kötü 5,5), PDR %95,8 |
+| H, + RERR | 4,2 sn, PDR %95,8 (fark yok) |
+| I: iki ayrık zincir, arıza kaynaktan uzak, yalnız HELLO zaman aşımı | İyileşme ort. 16,0 sn (en kötü 24,2), PDR %69,2, 1 tohumda iyileşme yok |
+| I, + ACK hatası tespiti | 6,2 sn (en kötü 14,3), PDR %88,3 |
+| I, + RERR | 6,2 sn, PDR %88,3 (fark yok) |
+
+Bulgular: (1) Aday tablosu ve histerezis yol kararsızlığını giderdi; Adım 04'te ertelenen sorun kapandı. (2) ACK hatası tespiti, iyileşme süresini 3-4 kat kısaltır (14,5 → 4,2 sn): arızayı HELLO zaman aşımını (15 sn) beklemeden 3 yeniden denemede (~3-4 sn) fark eder. (3) RERR bu iki topolojide ölçülebilir fayda sağlamadı: komşular poison reverse ve yedek adaylar sayesinde zaten bir HELLO içinde yeni yola geçiyor. RERR yalnızca yedeği olmayan düğümler için güvenlik ağı olarak kodda durur; "gerekli" demek yerine "denendi, bu topolojilerde ek kazanç yok" denecek. (4) İyileşme süresi HELLO periyodu, zaman aşımı ve yeniden deneme sayısına bağlıdır; bunların sistematik taraması Adım 08'de (deney altyapısı) yapılacak. (5) HELLO artık 16 bayt (başlık 8 + yük 4 + etiket 4): SF7'de 51,5 ms; 5 sn periyotla %1,03, yani yasal %1 sınırının hafifçe üstünde. HELLO periyodu SF7'de en az ~5,2 sn olmalı (pratikte 30-60 sn).
+
+**Sıradaki:** Adım 08, deney altyapısı (PDR, gecikme, iyileşme süresi; çoklu tekrar, CSV, Matplotlib grafikleri).
 
 ## Klasörler
 | Klasör | İçerik |
