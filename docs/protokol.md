@@ -45,3 +45,11 @@ Sabit başlık 8 bayt, ardından yük, ardından 4 bayt doğrulama etiketi. Topl
 
 ## Gateway kayıt kimliği
 Her mesajın kimliği `kaynak:sayaç` (sayaç, güvenlik katmanının 32 bit çerçeve sayacı). Veritabanı, köprü kuyruğu ve uzak sunucu bu kimlikle çift kaydı önler (uzak sunucuda `(gateway, uid)` benzersizdir).
+
+## Güvenli protokolün C uygulaması (`firmware/core/`)
+- Tüm kareler (HELLO, DATA, ACK, RERR) AES-128-CCM ile mühürlenir; `seq` alanı düğümün 32 bit çerçeve sayacının alt 16 bitidir.
+- **ACK yükü 3 bayt:** onaylanan paketin kaynağı (1 bayt) ve sıra numarası (2 bayt). ACK'in kendi `seq` değeri kendi çerçeve sayacıdır.
+- Boyutlar: HELLO 16 bayt (8 + 4 + 4), ACK 15 bayt (8 + 3 + 4), RERR 12 bayt, DATA 12 + yük.
+- Hop alanları (`next_hop`, `ttl`, `last_hop`) mühürlenmez; röle yalnızca bu baytları değiştirip kareyi aynen iletir, şifreyi çözmeden etiketi doğrular.
+- Geç kabul penceresi: sayacı son kabul edilenden en çok 32 geride ve daha önce görülmemiş kare kabul edilir (sıra dışı gelen paketler).
+- Zaman 32 bit milisaniye tamsayısıdır; radyo, rastgelelik ve teslim `afet_radio_if_t` ile verilir.

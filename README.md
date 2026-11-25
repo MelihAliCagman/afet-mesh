@@ -18,7 +18,7 @@ Baz istasyonu ve elektrik altyapısı çöktüğünde; STM32 saha/röle düğüm
 |---|---|---|
 | 0 | Python simülasyonu (adım 00-10) | **tamam** |
 | 1 | Raspberry Pi gateway, sahte radyo (adım 11-16) | **yazılım tamam** (adım 12-16); Pi kurulumu (adım 11) cihaz gelince |
-| 2 | STM32 protokol çekirdeği, UART sahte radyo (adım 17-24) | bekliyor |
+| 2 | STM32 protokol çekirdeği, UART sahte radyo (adım 17-24) | **C çekirdeği bilgisayarda tamam**; kartlarda doğrulama bekliyor |
 | 3 | Gerçek LoRa (adım 25-28) | bekliyor (modül siparişi gerekli) |
 | 4 | GPS, TFT, ESP8266, IMU, enerji (adım 29-35) | bekliyor |
 | 5 | Ölçüm, saha testi, rapor (adım 36-38) | bekliyor |
@@ -134,6 +134,50 @@ python -m pytest gateway/tests sim/tests -q       # 38 birim test
 **Sınırlar:** gerçek LoRa radyosu ve Pi henüz yok (sahte radyo simülasyon çıktısıdır); gateway güvenlik sayaçları bellekte tutulur (yeniden başlatmada son sayaç unutulur); konumlar GPS değil, düğümlerin bildirdiği koordinatlardır; uzak sunucu tek kullanıcı API anahtarıyla korunur ve TLS yoktur (demo).
 
 **Sıradaki:** Faz 2, STM32 protokol çekirdeği: önce bilgisayarda derlenen donanımdan bağımsız C kodu (paket serileştirme, HELLO, yönlendirme) ve Python ile uyum testleri, ardından kartlarda UART üzerinden sahte radyo.
+
+#### Faz 2: STM32 protokol çekirdeği, bilgisayarda doğrulanan kısım (adım 18-24'ün donanımsız bölümü)
+Protokol, STM32'ye taşınacak donanımdan bağımsız C koduna (`firmware/core/`) çevrildi. Kod hiçbir kart özelliğine dokunmaz; radyo, zaman ve rastgelelik küçük bir arayüzle (`afet_radio_if_t`) dışarıdan verilir. Bu yüzden aynı kod bilgisayarda Python simülasyonunun içinde, sonra kartlarda çalışır. Kartlara yazma, UART sahte radyo, flash'ta kalıcı sayaç ve donanım zamanlayıcısı kartlar elimize geçince yapılacak.
+
+| Adım | Dosya | Durum |
+|---|---|---|
+| 18 | `node.h` (`afet_radio_if_t`) | Radyo arayüzü hazır; UART sürücüsü kartta yazılacak |
+| 19 | `wire.c` | Tamam: Python ile bayt bayt aynı |
+| 20-21 | `routing.c`, `node.c` | Tamam: HELLO, yönlendirme tablosu, iletme, ACK, yeniden deneme, çift paket bastırma |
+| 22 | `node.c` | Arıza tespiti (ACK hatası, HELLO zaman aşımı, RERR) simülasyonda doğrulandı; 3-4 kartta zincir testi kartlarla |
+| 23 | `aes128.c`, `ccm.c`, `security.c` | AES-128-CCM, sayaç, replay ve klon tespiti tamam; donanım RNG ve flash'ta kalıcı sayaç kartta |
+| 24 | `lora_time.c` | Airtime ve duty cycle sayacı tamam; donanım zamanlayıcısına bağlama kartta |
+
+Çalıştırma (proje kökünden, venv açıkken; derleme için `gcc` aranır, yoksa testler atlanır):
+```
+python -m pytest firmware/tests -q          # C kodunu derler ve Python ile karşılaştırır (19 test)
+python -m pytest gateway/tests sim/tests firmware/tests -q   # tüm testler (59)
+```
+
+**Ana sonuçlar**
+
+| Konu | Sonuç |
+|---|---|
+| Paket biçimi (C ve Python) | 300 rastgele paket bayt bayt aynı; hatalı paketler aynı şekilde reddedilir |
+| AES-128-CCM | 400 rastgele (anahtar, nonce, başlık, yük) için `cryptography` kütüphanesiyle aynı şifreli metin ve etiket; bozuk etiket reddedilir |
+| Güvenlik alıcısı | 15 tohum x 500 rastgele olay (kopya, geç gelen, sahte, klon, sayaç atlaması): C ve Python her adımda aynı kararı verir |
+| Yönlendirme tablosu | 30 tohum x 300 işlem: aynı yol, maliyet, sıra numarası ve değişim sayısı |
+| Airtime ve duty cycle | 288 ayar kombinasyonunda formül farkı < 1e-12; 4000 işlemde duty cycle kararları aynı |
+| Testlerin gücü | C koduna bilerek hata eklenince (geç pencere 32 → 16, bağlantı maliyeti eşiği) testler başarısız oldu |
+| Bellek | Düğüm durumu 19,4 KB RAM, kod yaklaşık 5,6 KB flash (-Os); STM32F407'de 192 KB RAM / 1 MB flash var |
+| Cortex-M4 derlemesi | STM32CubeIDE araç zinciriyle `-Wall -Wextra -Werror` uyarısız derleniyor |
+| C düğümleri simülasyonda, 400 m zincir, %20 kayıp | PDR: yeniden denemesiz %44,0 (Python %43,0), 3 denemeyle %98,5 (Python %94,0) |
+| C düğümleri, yönlendirme | Zincir ve 3x3 ızgarada Python düğümleriyle aynı yol uzunluğu ve maliyet |
+| C düğümleri, self-healing (3x3 ızgara) | Yalnız HELLO: 13-14 sn (Python 14,5); ACK hatası tespitiyle 3,4-4,5 sn (Python 4,2) |
+| Uçtan uca güvenlik (C) | 4 düğümlü zincirde 10/10 şifreli paket gateway'e ulaştı; tekrar oynatma, sahte etiket ve değiştirilmiş yük reddedildi |
+
+**Bulgular**
+- Güvenli protokolde sıra numarası, çerçeve sayacının alt 16 bitidir; bu yüzden ACK'in hangi paketi onayladığı başlıkta değil yükte taşınır (3 bayt). ACK 13 değil 15 bayt olur, HELLO 16 bayttır.
+- Çok sekmeli ağda paketler sıra dışı gelebilir; geri kalan 32 sayaçlık "geç kabul" penceresi olmadan meşru paketler klon sanılırdı (Python tarafı da buna göre düzeltildi).
+- Python simülasyonu ile C kodunun aynı testten geçmesi, STM32'ye geçişte davranışın bozulmayacağına dair güçlü bir kanıttır; kartlarda yalnızca donanıma özgü kısımlar (zamanlayıcı, UART, flash, RNG) doğrulanacak.
+
+**Sınırlar:** bu bölüm yalnızca bilgisayarda doğrulandı; AES-CCM'in STM32'deki süresi, kesme/zamanlayıcı bağlantısı ve flash yazımı ölçülmedi; zaman sayacı 32 bit milisaniyedir (49 gün sonra taşar, uzun süreli çalışma için düzeltilecek); yönlendirme tablosu 8 aday, güvenlik tablosu 16 kaynak ile sınırlı.
+
+**Sıradaki:** donanım geldikçe: CubeIDE projesi ve SWV (Adım 17), UART sahte radyo, kartlarda zincir ve arıza testi, ardından gerçek LoRa (Faz 3).
 
 ## Klasörler
 | Klasör | İçerik |

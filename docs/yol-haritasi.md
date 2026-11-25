@@ -3,6 +3,8 @@
 Projeyi baştan sona **numaralı adımlara** böler. Her adım küçüktür: bir kavram + birkaç kod bloğu + çalıştırıp doğrulama. Bir adım bitince kutusu işaretlenir (`[x]`).
 Konum: `docs/yol-haritasi.md`. Takvim 13 hafta içindir; donanım gecikirse Faz 0–2 radyosuz ilerler.
 
+**İşaretler:** `[x]` tamam, `[~]` kod hazır ve bilgisayarda doğrulandı, kartta doğrulama bekliyor, `[ ]` başlanmadı.
+
 **Donanım sütunu:** ✅ şu an elimizde var · 🛒 sipariş gerekir
 
 ---
@@ -50,13 +52,13 @@ Amaç: protokolü C'ye taşıyıp STM32'de radyosuz (UART ile) çalıştırmak.
 | # | Adım | Ne yapılır / çıktı | Donanım |
 |---|------|--------------------|---------|
 | 17 | [ ] CubeIDE/CubeMX projesi | HAL projesi, SWV `printf`, iki kart arası UART kablolaması (TX↔RX çapraz, ortak GND, 3.3 V) | ✅ + 🛒 USB-TTL (3.3 V) önerilir |
-| 18 | [ ] Radyo soyutlaması | `radio_if.h` arayüzü + UART sahte radyo sürücüsü | ✅ |
-| 19 | [ ] Paket serileştirme | Pakete çevirme/ayrıştırma, CRC; bilgisayarda birim test | ✅ |
-| 20 | [ ] HELLO ve komşu tablosu (C) | Simülasyondaki mantığın C karşılığı | ✅ |
-| 21 | [ ] Yönlendirme, iletme, ACK (C) | Distance-vector, çift paket bastırma, ACK | ✅ |
-| 22 | [ ] Self-healing (C) | Zaman aşımı, RERR, alternatif rota; 3–4 kartta zincir ve arıza testi | ✅ |
-| 23 | [ ] Güvenlik (C) | AES-128 CCM (tiny-AES-c/mbedTLS), donanım RNG, replay koruması | ✅ |
-| 24 | [ ] Zamanlayıcılar ve duty cycle | Airtime sayacı, periyodik görevler, düşük güç hazırlığı | ✅ |
+| 18 | [~] Radyo soyutlaması | `radio_if.h` arayüzü + UART sahte radyo sürücüsü | ✅ |
+| 19 | [x] Paket serileştirme | Pakete çevirme/ayrıştırma, CRC; bilgisayarda birim test | ✅ |
+| 20 | [x] HELLO ve komşu tablosu (C) | Simülasyondaki mantığın C karşılığı | ✅ |
+| 21 | [x] Yönlendirme, iletme, ACK (C) | Distance-vector, çift paket bastırma, ACK | ✅ |
+| 22 | [~] Self-healing (C) | Zaman aşımı, RERR, alternatif rota; 3–4 kartta zincir ve arıza testi | ✅ |
+| 23 | [~] Güvenlik (C) | AES-128 CCM (tiny-AES-c/mbedTLS), donanım RNG, replay koruması | ✅ |
+| 24 | [~] Zamanlayıcılar ve duty cycle | Airtime sayacı, periyodik görevler, düşük güç hazırlığı | ✅ |
 
 **Faz 2 çıktısı:** birden çok STM32 kartında çalışan self-healing protokol (radyosuz).
 
