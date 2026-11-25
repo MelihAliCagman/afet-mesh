@@ -69,7 +69,7 @@ Amaç: sahte radyoyu gerçek radyoyla değiştirmek, ölçüm yapmak.
 
 | # | Adım | Ne yapılır / çıktı | Donanım |
 |---|------|--------------------|---------|
-| 25 | [ ] SX126x sürücüsü | SPI, başlatma, gönder/al; iki düğüm arası ilk mesaj | 🛒 LoRa modül + anten (en az 4) |
+| 25 | [~] SX127x (Ra-02, 433 MHz) sürücüsü | Sürücü ve güç/bant sınırı yazıldı, sahte çipte test edildi; kartta iki düğüm arası ilk mesaj bekliyor | 🛒 2-3 Ra-02 (anten dahil) |
 | 26 | [ ] Radyo ölçümü ve kalibrasyon | Gerçek RSSI/SNR/airtime; simülasyon parametrelerini gerçekle eşleştirme | 🛒 |
 | 27 | [ ] 3-hop zincir | Gerçek çok hoplu iletim, gerçek self-healing ölçümü | 🛒 |
 | 28 | [ ] Gateway'e gerçek radyo | Pi'ye LoRa modülü bağlama, mock radyonun yerine geçirme | 🛒 |

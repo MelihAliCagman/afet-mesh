@@ -186,7 +186,9 @@ python -m pytest gateway/tests sim/tests firmware/tests -q   # tüm testler (59)
 
 **Sınırlar:** bu bölüm yalnızca bilgisayarda doğrulandı; AES-CCM'in STM32'deki süresi, kesme/zamanlayıcı bağlantısı ve flash yazımı ölçülmedi; zaman sayacı 32 bit milisaniyedir (49 gün sonra taşar, uzun süreli çalışma için düzeltilecek); yönlendirme tablosu 8 aday, güvenlik tablosu 16 kaynak ile sınırlı.
 
-**Sıradaki:** donanım geldikçe: CubeIDE projesi ve SWV (Adım 17), UART sahte radyo, kartlarda zincir ve arıza testi, ardından gerçek LoRa (Faz 3).
+**Radyo kararı (Faz 3):** lehim gerektirmeyen Ra-02 (SX1278, 433 MHz) seçildi. Yasal çerçeve BTK Tablo-1 madde 15a: 433,05-434,79 MHz, 10 mW e.r.p., %10 görev çevrimi; sürücü gücü 10 dBm'e ve taşıyıcıyı bu banda kısıtlar. Simülasyon parametreleri 433 MHz'e göre güncellendi (TX 10 dBm, 1 m yol kaybı 25,2 dB, duyarlılık -125 dBm; menzil yaklaşık 1,3 km). SX127x sürücüsü (`firmware/drivers/sx127x/`) yazmaç düzeyinde sahte çipte test edildi (18 test); bağlantı planı [docs/kurulum/ra02-baglanti.md](docs/kurulum/ra02-baglanti.md).
+
+**Sıradaki:** iki kart arası UART denemesi, Ra-02 gelince kartta iki düğüm arası ilk LoRa mesajı ve radyo ölçümü.
 
 ## Klasörler
 | Klasör | İçerik |

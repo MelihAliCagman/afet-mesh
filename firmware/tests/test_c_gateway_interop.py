@@ -18,7 +18,7 @@ from sim.radio import Radio  # noqa: E402
 from sim.wire import decode, encode  # noqa: E402
 
 KEY = bytes(range(16))  # yalnızca test anahtarı
-CHAIN = [(0, 0), (400, 0), (800, 0), (1200, 0)]
+CHAIN = [(0, 0), (900, 0), (1800, 0), (2700, 0)]  # 433 MHz menzili ~1,3 km: komşu arası 900 m
 
 
 @pytest.fixture(scope="module")
