@@ -1,0 +1,57 @@
+:root{
+  --bg:#f4f5f7; --card:#ffffff; --ink:#14181f; --muted:#5b6472; --line:#dde1e8; --accent:#2a78d6;
+  --ok:#0e8a4f; --warn:#b36b00; --bad:#c62f2f; --ok-bg:#dff3e7; --warn-bg:#fdf0d6; --bad-bg:#fbe0e0;
+  --map-bg:#eef2f7; --grid:#cfd6e0;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101318; --card:#181d25; --ink:#e8ebf0; --muted:#9aa4b2; --line:#2b323d; --accent:#4a98f0;
+    --ok:#3fd08a; --warn:#f0b24a; --bad:#ff6b6b; --ok-bg:#12372a; --warn-bg:#3a2d12; --bad-bg:#401a1a;
+    --map-bg:#141a22; --grid:#2c3542;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 "Segoe UI",system-ui,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--line)}
+.brand{font-size:18px;font-weight:600}.brand small{font-weight:400;color:var(--muted);font-size:13px;margin-left:6px}
+.logo{color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:3px 10px;border-radius:999px;border:1px solid var(--line);background:var(--bg);font-size:13px}
+.chip b{font-weight:600}.chip.ok{background:var(--ok-bg);border-color:transparent}.chip.warn{background:var(--warn-bg);border-color:transparent}.chip.bad{background:var(--bad-bg);border-color:transparent}
+.alarmbar{margin:12px 16px 0;padding:10px 14px;border-radius:8px;background:var(--bad-bg);border-left:5px solid var(--bad);font-weight:500}
+main{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;padding:14px 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-width:0}
+.map-card{grid-row:span 2}
+.card-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+h2{font-size:15px;margin:0}
+.muted{color:var(--muted);font-size:12.5px}
+.note{color:var(--muted);font-size:12px;margin:6px 0 0}
+#map{height:520px;border-radius:8px;background:var(--map-bg);border:1px solid var(--line)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;color:var(--muted)}
+.legend i{display:inline-block;vertical-align:-1px;margin-right:4px}
+.dot{width:11px;height:11px;border-radius:50%}
+.dot.canli{background:var(--ok)}.dot.gecikmis{background:var(--warn)}.dot.kayip{background:var(--bad)}
+.ring{width:11px;height:11px;border-radius:50%;border:2px solid var(--bad);box-shadow:0 0 0 2px var(--bad-bg)}
+.gw{width:11px;height:11px;background:var(--accent);transform:rotate(45deg)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--muted);font-weight:500;border-bottom:1px solid var(--line);padding:4px 6px}
+td{padding:5px 6px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:none}
+.badge{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:500}
+.badge.canli{background:var(--ok-bg);color:var(--ok)}.badge.gecikmis{background:var(--warn-bg);color:var(--warn)}.badge.kayip{background:var(--bad-bg);color:var(--bad)}
+.badge.sos{background:var(--bad-bg);color:var(--bad)}.badge.durum{background:var(--bg);color:var(--muted)}.badge.sensor{background:var(--ok-bg);color:var(--ok)}
+.batt{display:inline-block;width:38px;height:8px;border-radius:4px;background:var(--line);vertical-align:middle;margin-right:5px;overflow:hidden}
+.batt>i{display:block;height:100%;background:var(--ok)}.batt.low>i{background:var(--bad)}
+.feed{list-style:none;margin:0;padding:0;max-height:230px;overflow:auto}
+.feed li{display:flex;gap:8px;align-items:baseline;padding:5px 2px;border-bottom:1px solid var(--line);font-size:13px}
+.feed li:last-child{border-bottom:none}
+.feed .t{margin-left:auto;color:var(--muted);font-size:12px;white-space:nowrap}
+.feed li.sos{background:var(--bad-bg);border-radius:6px;padding-left:6px}
+.btns{display:flex;flex-wrap:wrap;gap:8px;align-items:end}
+button,select{font:inherit;padding:5px 10px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+button:hover{border-color:var(--accent)}
+label{display:flex;flex-direction:column;font-size:12px;color:var(--muted);gap:3px}
+.node-label{background:none;border:none;box-shadow:none;color:var(--ink);font-weight:600;font-size:12px;padding:0}
+.node-label:before{display:none}
+.leaflet-container{font:inherit}
+@media (max-width:900px){main{grid-template-columns:1fr}.map-card{grid-row:auto}#map{height:380px}}

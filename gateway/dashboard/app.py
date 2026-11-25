@@ -71,7 +71,7 @@ def create_app(db, clock=time.time, mock=None):
 
     @app.get("/api/health")
     def api_health():
-        return build_health(db, clock())
+        return {**build_health(db, clock()), "demo": mock is not None}
 
     @app.get("/api/stream")
     def api_stream():
@@ -87,7 +87,7 @@ def create_app(db, clock=time.time, mock=None):
                 events, last_msg, last_alarm = events_since(db, last_msg, last_alarm)
                 for e in events:
                     yield f"event: {e['type']}\ndata: {json.dumps(e['data'])}\n\n"
-                yield f"event: health\ndata: {json.dumps(build_health(db, clock()))}\n\n"
+                yield f"event: health\ndata: {json.dumps({**build_health(db, clock()), 'demo': mock is not None})}\n\n"
                 time.sleep(1.0)
 
         return StreamingResponse(gen(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})

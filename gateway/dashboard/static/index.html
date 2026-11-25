@@ -1,1 +1,69 @@
-<!doctype html><title>panel</title>
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Afet Mesh Paneli</title>
+<link rel="stylesheet" href="/static/vendor/leaflet.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <div class="brand"><span class="logo" aria-hidden="true">◈</span> Afet Mesh Ağı <small>gateway paneli</small></div>
+  <div class="chips" id="chips" aria-live="polite"></div>
+</header>
+
+<div id="alarmbar" class="alarmbar" hidden role="alert"></div>
+
+<main>
+  <section class="card map-card">
+    <div class="card-head">
+      <h2>Düğüm haritası</h2>
+      <div class="legend">
+        <span><i class="dot canli"></i> canlı</span>
+        <span><i class="dot gecikmis"></i> gecikmiş</span>
+        <span><i class="dot kayip"></i> kayıp</span>
+        <span><i class="ring"></i> SOS</span>
+        <span><i class="gw"></i> gateway</span>
+      </div>
+    </div>
+    <div id="map" aria-label="Düğümlerin gateway'e göre konumu (metre)"></div>
+    <p class="note">Çevrimdışı koordinat düzlemi: konumlar gateway'e göre metre. GPS gelince harita altlığı eklenecek.</p>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Düğümler</h2><span class="muted" id="nodecount"></span></div>
+    <table id="nodetable">
+      <thead><tr><th>Düğüm</th><th>Durum</th><th>Pil</th><th>Konum (m)</th><th>Son görülme</th><th>Mesaj</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Mesajlar</h2><span class="muted">canlı akış</span></div>
+    <ul id="feed" class="feed"></ul>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Güvenlik olayları</h2><span class="muted" id="alarmcount"></span></div>
+    <ul id="alarms" class="feed"></ul>
+  </section>
+
+  <section class="card demo" id="demo" hidden>
+    <div class="card-head"><h2>Demo kontrolleri</h2><span class="muted">yalnızca sahte radyo modunda</span></div>
+    <div class="btns">
+      <label>Düğümü kapat
+        <select id="killsel"></select>
+      </label>
+      <button id="killbtn">Kapat</button>
+      <button data-attack="replay">Tekrar oynatma saldırısı</button>
+      <button data-attack="forgery">Sahte paket saldırısı</button>
+      <button data-attack="clone">Klon saldırısı</button>
+    </div>
+  </section>
+</main>
+
+<script src="/static/vendor/leaflet.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
