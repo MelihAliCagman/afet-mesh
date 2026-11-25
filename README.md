@@ -17,7 +17,7 @@ Baz istasyonu ve elektrik altyapısı çöktüğünde; STM32 saha/röle düğüm
 | Faz | İçerik | Durum |
 |---|---|---|
 | 0 | Python simülasyonu (adım 00-10) | **tamam** |
-| 1 | Raspberry Pi gateway, sahte radyo (adım 11-16) | **yazılım tamam** (adım 12-16); Pi kurulumu (adım 11) cihaz gelince |
+| 1 | Raspberry Pi gateway, sahte radyo (adım 11-16) | **tamam**; yazılım Raspberry Pi 4 üzerinde de çalışıyor |
 | 2 | STM32 protokol çekirdeği, UART sahte radyo (adım 17-24) | **C çekirdeği bilgisayarda tamam**; kartlarda doğrulama bekliyor |
 | 3 | Gerçek LoRa (adım 25-28) | bekliyor (modül siparişi gerekli) |
 | 4 | GPS, TFT, ESP8266, IMU, enerji (adım 29-35) | bekliyor |
@@ -90,12 +90,12 @@ Protokolün ayrıntısı: [docs/protokol.md](docs/protokol.md). Ham ölçümler:
 
 **Faz 0 tamam.**
 
-#### Faz 1: Gateway yazılımı, sahte radyo ile (adım 12-16 tamam, 11 Pi gelince)
-Gateway'in yazılımı gerçek radyo ve Raspberry Pi olmadan, bilgisayarda geliştirildi. Simülasyondaki ağ, "sahte radyo" ile gateway'e gerçek bir LoRa radyosu gibi bağlanıyor: havadan gelen her paket güvenli bayt dizisine çevrilip alıcı servise veriliyor. Pi geldiğinde aynı kod olduğu gibi çalışacak ([docs/kurulum/pi-kurulum.md](docs/kurulum/pi-kurulum.md)).
+#### Faz 1: Gateway yazılımı, sahte radyo ile (adım 11-16 tamam)
+Gateway'in yazılımı gerçek radyo olmadan, bilgisayarda geliştirildi ve sonra Raspberry Pi 4'e kuruldu. Simülasyondaki ağ, "sahte radyo" ile gateway'e gerçek bir LoRa radyosu gibi bağlanıyor: havadan gelen her paket güvenli bayt dizisine çevrilip alıcı servise veriliyor. Aynı kod Pi'de değişiklik olmadan çalıştı ([docs/kurulum/pi-kurulum.md](docs/kurulum/pi-kurulum.md)).
 
 | Adım | Modül | Ne yapar |
 |---|---|---|
-| 11 | `docs/kurulum/pi-kurulum.md`, `gateway/deploy/` | Pi kurulum adımları ve systemd hizmet dosyaları (Pi gelince uygulanacak) |
+| 11 | `docs/kurulum/pi-kurulum.md`, `gateway/deploy/` | Pi 4 kurulumu ve systemd hizmet dosyaları (uygulandı: testler geçti, panel hizmeti çalışıyor) |
 | 12 | `gateway/receiver/`, `sim/wire.py` | Paket çözücü, doğrulama (AES-CCM), uygulama yükü, SQLite şeması, ACK üretimi |
 | 13 | `gateway/mockradio.py` | Sahte radyo: simülasyonu gateway'e besler, saldırı ve arıza enjekte eder |
 | 14 | `gateway/dashboard/app.py` | FastAPI sunucusu: düğüm, mesaj, alarm, sağlık özeti, canlı akış (SSE) |
@@ -124,6 +124,7 @@ python -m pytest gateway/tests sim/tests -q       # 38 birim test
 | Köprü: yükleme sırasında çökme (t = 330 sn) | Sunucu 7 mesajı almıştı ama işaretlenmemişti; yeniden başlayan köprü tekrar yolladı, sunucu 7 çiftin hepsini reddetti |
 | Köprü uçtan uca (480 sn) | Gateway'de 375, uzak sunucuda 375 mesaj, kuyrukta 0: kayıp yok, çift yok |
 | Köprü geri çekilme (sunucu 500 döndürürse) | Bekleme 2, 4, 8, 16 sn (üstel), bağlantı gelince sıfırlanır |
+| Raspberry Pi 4 (4 GB, 64 bit) üzerinde | 40 birim test geçti; panel SSH tüneliyle tarayıcıdan açıldı; panel hizmeti (systemd) açılışta kendiliğinden başlıyor; güç kontrolü temiz (`get_throttled=0x0`) |
 
 **Bulgular**
 - Radyo seviyesinde aynı paketin birden çok kopyası normaldir (yeniden gönderim). Kopya ile tekrar oynatma saldırısını ayırt etmek için zaman penceresi kullanıldı: 30 sn içinde gelen özdeş kare `dup`, daha sonrası `replay`. Pencere olmadan normal çalışmada yanlış alarm veriyordu.
@@ -131,7 +132,7 @@ python -m pytest gateway/tests sim/tests -q       # 38 birim test
 - Köprü, sunucu "aldım" demeden kaydı işaretlemez; çökme olursa en kötü ihtimalle tekrar yollanır, kaybolmaz.
 - Panel tarayıcıdan yalnızca yerel dosyalarla çalışır (harita altlığı internetten gelmez), yani afet anında internet olmadan açılır.
 
-**Sınırlar:** gerçek LoRa radyosu ve Pi henüz yok (sahte radyo simülasyon çıktısıdır); gateway güvenlik sayaçları bellekte tutulur (yeniden başlatmada son sayaç unutulur); konumlar GPS değil, düğümlerin bildirdiği koordinatlardır; uzak sunucu tek kullanıcı API anahtarıyla korunur ve TLS yoktur (demo).
+**Sınırlar:** gerçek LoRa radyosu henüz yok (sahte radyo simülasyon çıktısıdır); gateway güvenlik sayaçları bellekte tutulur (yeniden başlatmada son sayaç unutulur); konumlar GPS değil, düğümlerin bildirdiği koordinatlardır; uzak sunucu tek kullanıcı API anahtarıyla korunur ve TLS yoktur (demo).
 
 **Sıradaki:** Faz 2, STM32 protokol çekirdeği: önce bilgisayarda derlenen donanımdan bağımsız C kodu (paket serileştirme, HELLO, yönlendirme) ve Python ile uyum testleri, ardından kartlarda UART üzerinden sahte radyo.
 

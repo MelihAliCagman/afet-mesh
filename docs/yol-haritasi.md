@@ -35,7 +35,7 @@ Amaç: gerçek radyo olmadan gateway yazılımını tamamlamak.
 
 | # | Adım | Ne yapılır / çıktı | Donanım |
 |---|------|--------------------|---------|
-| 11 | [ ] Pi hazırlığı | İşletim sistemi, SSH, Python ortamı, repo klonu (belge ve hizmet dosyaları hazır: docs/kurulum/pi-kurulum.md, Pi gelince uygulanacak) | ✅ (microSD, 5 V/3 A güç doğrulanacak) |
+| 11 | [x] Pi hazırlığı | İşletim sistemi, SSH, Python ortamı, repo klonu (Pi 4'e kuruldu: docs/kurulum/pi-kurulum.md) | ✅ (microSD, 5 V/3 A güç doğrulanacak) |
 | 12 | [x] Paket çözücü ve SQLite | Paket doğrulama/çözme, veritabanı şeması, kayıt | ✅ |
 | 13 | [x] Sahte radyo ile besleme | Simülasyon çıktısını alıcı servise akıtan mock radyo | ✅ |
 | 14 | [x] Dashboard sunucusu | FastAPI uç noktaları, canlı veri (WebSocket/SSE) | ✅ |

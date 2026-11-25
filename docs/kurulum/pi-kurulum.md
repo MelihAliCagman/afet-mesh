@@ -91,3 +91,14 @@ Panel yalnızca Pi'nin kendi içinde (`127.0.0.1`) dinler, ağa açık değildir
 - [ ] Panel bilgisayardan açılıyor
 - [ ] `.env` dosyası repoda yok (`git status` temiz)
 - [ ] LoRa modülü bağlanınca (Faz 3): SPI pinleri modül datasheet'ine göre, 3,3 V, anten takılı
+
+## 8. Gerçek kurulumda karşılaşılanlar ve çözümleri
+- **Kart okuyucu yoksa:** Karttaki mevcut Raspberry Pi OS kullanıldı. Kartın sahibi izin verdi; Pi'ye ağdan girip yalnızca okuma komutlarıyla (`lsblk`, `df -h`, `ls /home`) bakıldı. Kartı silmek gerekirse okuyucu veya USB bellekle açılan ayrı bir sistem gerekir.
+- **Doğrudan Ethernet:** Pi'nin IPv4 adresi yoktur, yalnızca IPv6 yerel adresi (`fe80::...`). `ping raspberrypi.local` adı IPv6 olarak çözer; `ssh pi@fe80::...%<arabirim no>` ile bağlanılır. Bilgisayarda `Test-NetConnection -ComputerName "fe80::...%10" -Port 22` ile SSH kapısı sınanır.
+- **İnternet:** Wi-Fi'dan Ethernet'e Windows internet paylaşımı (ICS) açılınca Pi `192.168.137.x` adresi alır. Ethernet bağdaştırıcısını seçin; VirtualBox'ın `Ethernet 3` sanal ağını seçmeyin. İnternet paylaşımı açılınca SSH bağlantısı kopar, yeniden bağlanın.
+- **Okul ağı:** `ping` (ICMP) ve NTP (UDP 123) dışarı çıkmaz, HTTP/HTTPS çalışır. Pi saati NTP ile eşleşmez; saat yanlışsa `apt` ve sertifikalar bozulur. Saati web yanıtından düzeltin:
+  `sudo date -s "$(curl -sI http://example.com | grep -i '^date:' | cut -d' ' -f2-)"`
+  Elektrik kesintisinden sonra saat geri kalabilir, aynı komutla düzeltilir.
+- **Büyük güncelleme:** Yavaş internette (`full-upgrade`, yüzlerce MB) hemen yapılmadı; yalnızca `apt update` ve gerekli paketler kuruldu.
+- **Paneli açma:** `ssh -L 8000:127.0.0.1:8000 pi@<adres>` ile tünel kurulup tarayıcıda `http://127.0.0.1:8000` açıldı. Tünel açıkken Pi'de sunucu durursa tarayıcı `Connection refused` mesajları üretir, zararsızdır.
+- **Parola:** Varsayılan `pi` parolası, Pi bir ağa doğrudan bağlanmadan önce değiştirilmelidir.
