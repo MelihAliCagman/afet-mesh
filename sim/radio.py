@@ -1,3 +1,4 @@
+import random
 from functools import partial
 
 from sim.lora import airtime
@@ -5,11 +6,13 @@ from sim.mesh_sim import can_hear, rssi
 
 
 class Radio:
-    def __init__(self, sim, nodes, sf=7):
+    def __init__(self, sim, nodes, sf=7, loss=0.0, seed=0):
         self.sim = sim
         self.nodes = nodes
         self.sf = sf
         self._handlers = {}
+        self.loss = loss
+        self.rng = random.Random(seed)
 
     def attach(self, node_id, handler):
         self._handlers[node_id] = handler
@@ -18,6 +21,8 @@ class Radio:
         t = airtime(packet.size(), self.sf)
         for rx in self.nodes:
             if rx.node_id != tx.node_id and can_hear(tx, rx):
+                if self.loss and self.rng.random() < self.loss:
+                    continue
                 self.sim.schedule(t, partial(self._deliver, rx.node_id, packet, rssi(tx, rx)))
         return t
 

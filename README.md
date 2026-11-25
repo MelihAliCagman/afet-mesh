@@ -16,7 +16,7 @@ Baz istasyonu ve elektrik altyapısı çöktüğünde; STM32 saha/röle düğüm
 
 | Faz | İçerik | Durum |
 |---|---|---|
-| 0 | Python simülasyonu (adım 00-10) | **devam ediyor** (adım 04 tamam) |
+| 0 | Python simülasyonu (adım 00-10) | **devam ediyor** (adım 05 tamam) |
 | 1 | Raspberry Pi gateway, sahte radyo (adım 11-16) | bekliyor |
 | 2 | STM32 protokol çekirdeği, UART sahte radyo (adım 17-24) | bekliyor |
 | 3 | Gerçek LoRa (adım 25-28) | bekliyor (modül siparişi gerekli) |
@@ -88,7 +88,19 @@ Bulgular: (1) 5 sn'lik HELLO periyodu SF7'de bile %1 duty cycle bütçesinin yak
 
 Bulgular: (1) Gateway bilgisi zincirde her HELLO periyodunda bir hop yürür; uçtaki düğümün bilgisi gateway'in bir sıra numarası gerisinde kalır. (2) **Yol kararsızlığı:** iki seçenek arasında kalan düğümlerde (400 m zincirde düğüm 3: 60 sn'de 23 sonraki hop değişimi; ızgarada 2 düğüm: 80 sn'de 31'er) yol, her yeni sıra numarasında zayıf doğrudan bağlantı ile iki sağlam hop arasında gidip gelir. Döngü yoktur, hedefe ulaşılır; ama yol kararlı değildir. Çözümü, yol zaman aşımı ve hata bildirimiyle birlikte self-healing adımında (Adım 07) yapılacak; iyileşme süresi ölçümünden önce kararlı bir taban çizgisi gerekir.
 
-**Sıradaki:** Adım 05, veri iletimi (DATA paketi, TTL, çift paket bastırma, hop-hop ACK).
+**Adım 05: Veri iletimi** (`sim/node.py`, `sim/packet.py`, `sim/radio.py`). Düğüm, yönlendirme tablosundaki sonraki hop'a adreslenmiş DATA paketi gönderir. Ara düğümler yalnızca kendilerine adreslenen paketi işler, TTL'yi azaltıp sonraki hop'a aktarır; TTL bitince paket atılır. Aynı (kaynak, sıra no) çifti ikinci kez gelirse bastırılır (liste 256 kayıtla sınırlı). Her hop, paketi aldığında bir önceki hop'a ACK yollar; ACK 1 sn içinde gelmezse paket en fazla 3 kez yeniden gönderilir. ACK'in kime gideceği için pakete `last_hop` alanı eklendi (başlık 7'den 8 bayta çıktı). Radyoya, deneyler için alıcı başına rastgele paket kaybı (`loss`) eklendi.
+
+| Test | Sonuç |
+|---|---|
+| 400 m zincirde son düğümden 10 DATA, kayıpsız | 10/10 gateway'e ulaştı; TTL, çift, yol yok sayaçları 0 |
+| Kayıp %20, yeniden deneme yok | PDR %65,5 |
+| Kayıp %20, 3 yeniden deneme | PDR %100 (267 yeniden gönderim, 123 çift paket bastırıldı) |
+| Kayıp %40, yeniden deneme yok | PDR %29,5 |
+| Kayıp %40, 3 yeniden deneme | PDR %91,5 (647 yeniden gönderim, 204 çift bastırıldı) |
+
+Bulgular: (1) Hop-hop ACK, 3 hop'lu zincirde %40 paket kaybında bile teslim oranını %29,5'ten %91,5'e çıkarır; kayıp hop sayısıyla çarpıldığı için uçtan uca ACK yerine hop-hop ACK seçildi. (2) Bedeli kanal yüküdür: kayıp arttıkça yeniden gönderim ve çift paket artar, bu da airtime ve duty cycle tüketir. (3) ACK kaybolduğunda gönderen paketi tekrar yollar; alıcı çifti bastırır ama yine de ACK yollar, yoksa gönderen vazgeçene kadar tekrar eder. (4) Kayıp modeli bağımsız ve simetriktir; çarpışma ve asimetrik bağlantılar sonraki adımlarda eklenecek.
+
+**Sıradaki:** Adım 06, kanal erişimi (çarpışma modeli, dinle-sonra-konuş, rastgele backoff).
 
 ## Klasörler
 | Klasör | İçerik |

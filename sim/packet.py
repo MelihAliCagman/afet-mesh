@@ -10,7 +10,7 @@ class PacketType(Enum):
 
 
 BROADCAST = 255
-HEADER_BYTES = 7
+HEADER_BYTES = 8
 TAG_BYTES = 4
 
 
@@ -23,6 +23,7 @@ class Packet:
     seq: int
     ttl: int
     payload: bytes = b""
+    last_hop: int = 0
 
     def size(self) -> int:
         return HEADER_BYTES + len(self.payload) + TAG_BYTES
