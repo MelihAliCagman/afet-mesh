@@ -143,7 +143,7 @@ Protokol, STM32'ye taşınacak donanımdan bağımsız C koduna (`firmware/core/
 | Adım | Dosya | Durum |
 |---|---|---|
 | 17 | `firmware/drivers/f407disc/`, `firmware/apps/`, `scripts/` | Kart desteği (başlangıç kodu, bağlayıcı betiği, 168 MHz saat, LED, düğme, SysTick, çevrim sayacı), derleme ve yükleme betikleri, RAM tamponundan log okuma; kartta LED denemesi ve öz-sınama çalışıyor (SWV ve iki kart arası UART bekliyor) |
-| 18 | `node.h` (`afet_radio_if_t`) | Radyo arayüzü hazır; UART sürücüsü kartta yazılacak |
+| 18 | `node.h` (`afet_radio_if_t`), `framing.c`, `drivers/f407disc/uart.c`, `apps/uartnode` | Radyo arayüzü, SLIP çerçeveleme, USART2 sürücüsü ve UART sahte radyo hazır; tek kartta iç döngü kartta doğrulandı, iki kart arası kablolu deneme bekliyor ([docs/kurulum/stm32-kart.md](docs/kurulum/stm32-kart.md)) |
 | 19 | `wire.c` | Tamam: Python ile bayt bayt aynı |
 | 20-21 | `routing.c`, `node.c` | Tamam: HELLO, yönlendirme tablosu, iletme, ACK, yeniden deneme, çift paket bastırma |
 | 22 | `node.c` | Arıza tespiti (ACK hatası, HELLO zaman aşımı, RERR) simülasyonda doğrulandı; 3-4 kartta zincir testi kartlarla |
@@ -176,6 +176,7 @@ python -m pytest gateway/tests sim/tests firmware/tests -q   # tüm testler (59)
 | AES-CCM süresi (168 MHz) | 20 baytlık kareyi mühürlemek 287 us, doğrulayıp çözmek 288 us (AES blok 39 us); röle için tam doğrulama 305 us. SF7'de aynı karenin havada kalma süresi 71,9 ms: şifreleme maliyeti havadaki sürenin %0,4'ü |
 | Yönlendirme güncellemesi (kartta) | HELLO ilanı başına 2 us |
 | **6 düğümlü ağ tek kartta** (yazılım radyosu, elmas topoloji, 200 sn sanal zaman) | Yol 11 sn'de öğrenildi; arızadan önce 25/25, düğüm 3 (yoldaki düğüm) kapatılınca iyileşme **4,1 sn**, arızadan sonra 14/15 teslim; son yol 6 > 2 > 1. Python'daki C düğümleriyle (3,4-4,5 sn) uyumlu. Tüm ağı 200 sn'lik sanal sürede koşmak işlemcide 337 ms sürdü (gerçek zamandan 590 kat hızlı) |
+| UART sahte radyo (tek kartta iç döngü) | USART2 115200 bayt/sn, SLIP çerçeveleme: 43 kareden 42'si alındı (sonuncusu yoldaydı), bozuk çerçeve 0, taşma 0; düğüm 2 yolu `1 maliyet 1` öğrendi, 9 raporun 9'u gateway'e teslim, 9 ACK, yeniden gönderim 0 |
 | Gerçek zamanlı kart demosu | Kartta 6 düğümlü ağ gerçek zamanda çalışır: yeşil LED her gateway teslimatında, turuncu yeniden gönderimde, mavi yol değişince yanar; USER düğmesi yoldaki düğümü kapatır/açar (kırmızı LED), sayaçlar korunarak |
 
 **Bulgular**

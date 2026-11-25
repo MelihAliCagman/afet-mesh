@@ -17,6 +17,7 @@ void SVC_Handler(void) __attribute__((weak, alias("Default_Handler")));
 void DebugMon_Handler(void) __attribute__((weak, alias("Default_Handler")));
 void PendSV_Handler(void) __attribute__((weak, alias("Default_Handler")));
 void SysTick_Handler(void) __attribute__((weak, alias("Default_Handler")));
+void USART2_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
 
 /* Vektör tablosu: ilk 16 giriş çekirdek, sonrası 82 çevre birimi kesmesi (hepsi varsayılan işleyiciye gider). */
 __attribute__((section(".isr_vector"), used)) void (*const vectors[16 + 82])(void) = {
@@ -33,7 +34,9 @@ __attribute__((section(".isr_vector"), used)) void (*const vectors[16 + 82])(voi
     0,
     PendSV_Handler,
     SysTick_Handler,
-    [16 ... 97] = Default_Handler,
+    [16 ... 53] = Default_Handler,
+    [54] = USART2_IRQHandler,
+    [55 ... 97] = Default_Handler,
 };
 
 void Reset_Handler(void)

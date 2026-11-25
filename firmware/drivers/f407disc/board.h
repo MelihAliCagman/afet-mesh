@@ -9,6 +9,7 @@
 
 void board_init(void);
 uint32_t board_cpu_hz(void);
+uint32_t board_apb1_hz(void); /* PLL açıkken 42 MHz, değilse 16 MHz */
 uint32_t board_millis(void);
 void board_cycles_start(void);
 uint32_t board_cycles(void);

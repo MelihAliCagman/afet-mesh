@@ -5,6 +5,9 @@ Kullanım (proje kökünden):
   python scripts/flash.py selftest --log        # yükler, bekler, log tamponunu okuyup yazar
   python scripts/flash.py selftest --log-only   # yüklemeden yalnızca logu okur
   python scripts/flash.py --restore YEDEK.bin   # özgün yazılımı (yedekten) geri yükler
+  python scripts/flash.py --list                # bağlı kartları (ST-LINK seri numaraları) listeler
+  --sn <seri no>  birden çok kart bağlıyken hangi karta işlem yapılacağını seçer
+  --wait <sn>     yüklemeden sonra loga bakmadan önce beklenecek süre (varsayılan 3)
 Not: Yazmadan önce kartın yedeği alınmış olmalıdır."""
 import glob
 import os
@@ -25,12 +28,16 @@ def find(pattern):
 
 
 CLI = None
+SN = None
 
 
 def cli(*args):
     global CLI
     if CLI is None:
         CLI = find(r"C:\ST\STM32CubeIDE_*\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.cubeprogrammer*\tools\bin\STM32_Programmer_CLI.exe")
+    args = list(args)
+    if SN and "port=SWD" in args:
+        args.insert(args.index("port=SWD") + 1, "sn=" + SN)
     r = subprocess.run([CLI, *args], capture_output=True, text=True, errors="replace")
     return r.returncode, r.stdout + r.stderr
 
@@ -71,8 +78,8 @@ def read_log(app, size=2048, end_marker="<BITTI>"):
     yapılır. Bitiş işareti görünmezse bekletme büyütülerek yeniden denenir."""
     sym = symbols(app)
     text = ""
-    for repeats in (1, 3, 6, 12):
-        delay = ["-r8", "0x08000000", "32768"] * repeats
+    for repeats in (0, 1, 3, 6, 12, 24, 48):
+        delay = ["-r8", "0x08000000", "32768"] * repeats  # 0: bekletme yok (program zaten bitmişse)
         code, out = cli("-c", "port=SWD", *delay,
                         "-r8", hex(sym["log_head"]), "4", "-r8", hex(sym["log_buf"]), str(size))
         mem = parse_mem(out)
@@ -90,7 +97,20 @@ def read_log(app, size=2048, end_marker="<BITTI>"):
 
 
 def main():
+    global SN
     args = sys.argv[1:]
+    wait = 3.0
+    if "--sn" in args:
+        i = args.index("--sn")
+        SN = args[i + 1]
+        del args[i:i + 2]
+    if "--wait" in args:
+        i = args.index("--wait")
+        wait = float(args[i + 1])
+        del args[i:i + 2]
+    if args[:1] == ["--list"]:
+        print(cli("-l", "st")[1])
+        return
     if args[:1] == ["--restore"]:
         flash(args[1])
         return
@@ -98,7 +118,7 @@ def main():
     if "--log-only" not in args:
         flash(os.path.join(BUILD, app + ".bin"))
     if "--log" in args or "--log-only" in args:
-        time.sleep(2.0)
+        time.sleep(wait)
         print(read_log(app))
 
 

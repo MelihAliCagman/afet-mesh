@@ -41,6 +41,11 @@ uint32_t board_cpu_hz(void)
     return cpu_hz;
 }
 
+uint32_t board_apb1_hz(void)
+{
+    return cpu_hz == 168000000u ? 42000000u : cpu_hz;
+}
+
 void board_cycles_start(void)
 {
     DEMCR |= (1u << 24); /* TRCENA */
