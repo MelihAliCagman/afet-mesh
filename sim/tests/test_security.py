@@ -94,3 +94,22 @@ def test_different_types_do_not_confuse():
     d = tx.seal(GW, GW, PacketType.DATA, b"x")
     assert rx.open(h)[0] == "ok" and rx.open(d)[0] == "ok"
     assert rx.open(replace(d, ptype=PacketType.ACK))[0] == "bad_tag"
+
+
+def test_late_frame_within_window_accepted_once():
+    t = [0.0]
+    rx, tx = Receiver(KEY, clock=lambda: t[0]), make()
+    frames = [tx.seal(GW, GW, PacketType.DATA, b"x") for _ in range(6)]
+    for i in (0, 1, 2, 4, 5):
+        assert rx.open(frames[i])[0] == "ok"
+    assert rx.open(frames[3])[0] == "ok"      # geç gelen, pencere içinde
+    assert rx.open(frames[3])[0] == "dup"     # ikinci kez gelirse kopya
+    assert not rx.alarms
+
+
+def test_old_unseen_frame_beyond_window_is_regression():
+    rx, tx = Receiver(KEY), make()
+    frames = [tx.seal(GW, GW, PacketType.DATA, b"x") for _ in range(100)]
+    for f in frames[50:]:
+        rx.open(f)
+    assert rx.open(frames[0])[0] == "regression"

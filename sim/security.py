@@ -14,6 +14,7 @@ HISTORY = 64
 ALARM_COUNT = 3
 ALARM_WINDOW = 60.0
 DUP_WINDOW = 30.0
+LATE_WINDOW = 32
 
 
 def load_key():
@@ -119,6 +120,10 @@ class Receiver:
             if seen is not None and seen[0] == pkt.tag:
                 # Özdeş kare: kısa süre içindeyse yeniden gönderim (dup), değilse tekrar oynatma (replay)
                 return ("dup" if c == last or self.clock() - seen[1] <= DUP_WINDOW else "replay"), None
+            if c >= last - LATE_WINDOW and c not in hist:
+                # Çok sekmeli ağda paketler sıra dışı gelebilir: pencere içindeki görülmemiş sayaç kabul edilir
+                hist[c] = (pkt.tag, self.clock())
+                return "ok", data
             self._note(pkt.src, "regression")
             return "regression", None
         return "bad_tag", None

@@ -20,9 +20,10 @@ Simülasyondaki prototip: `sim/security.py`. STM32 uygulaması Adım 23'te aynı
 | Durum | Anlamı | Davranış |
 |---|---|---|
 | `ok` | Etiket geçerli, sayaç ileri | Kabul, sayaç güncellenir |
+| `ok` (geç) | Etiket geçerli, sayaç geride ama son 32 sayaç penceresinde ve daha önce görülmemiş | Kabul (çok sekmeli ağda sıra dışı gelen paket) |
 | `dup` | Aynı kare, son kabul edilenle özdeş | Atılır (yeniden gönderim) |
 | `replay` | Daha önce kabul edilmiş eski kare | Atılır |
-| `regression` | Etiket geçerli ama sayaç geride ve kare yeni | Atılır, anomali olayı |
+| `regression` | Etiket geçerli ama sayaç pencerenin dışında geride ve kare yeni | Atılır, anomali olayı |
 | `jump` | Sayaç son değerin 1024'ten fazla ilerisinde | Atılır, anomali olayı |
 | `bad_tag` | Etiket geçersiz | Atılır |
 
