@@ -209,4 +209,4 @@ pip install -r requirements.txt
 ```
 
 ## Yazarlar
-Ayşe, Melih Ali Çağman — Danışman: Prof. Fecir Duran
+Ayşe Akdoğan, Melih Ali Çağman — Danışman: Prof. Fecir Duran
